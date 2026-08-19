@@ -72,7 +72,7 @@ export function fail(code: TaskMintErrorCode, details: TaskMintErrorDetails = {}
 export function errorMessage(code: TaskMintErrorCode, details: TaskMintErrorDetails = {}): string {
   switch (code) {
     case 'task-order-invalid':
-      return 'Task order must be a finite number.';
+      return 'Task order must be a safe integer.';
     case 'task-title-required':
       return 'Task title is required.';
     case 'task-title-too-long':

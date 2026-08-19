@@ -1,4 +1,18 @@
-import type { Task } from '../domain/types';
+import type { Priority, Recurrence, Task } from '../domain/types';
+import { strings } from '../i18n/en';
+
+const priorityLabels: Record<Priority, string> = {
+  low: strings.priorityLow,
+  medium: strings.priorityMedium,
+  high: strings.priorityHigh,
+  urgent: strings.priorityUrgent
+};
+
+const recurrenceLabels: Record<Exclude<Recurrence, 'none'>, string> = {
+  daily: strings.recurrenceDaily,
+  weekly: strings.recurrenceWeekly,
+  monthly: strings.recurrenceMonthly
+};
 
 interface Props {
   task: Task;
@@ -40,7 +54,9 @@ export function TaskItem({
           className={`check-button ${task.status === 'completed' ? 'checked' : ''}`}
           type="button"
           aria-label={
-            task.status === 'completed' ? `Reopen ${task.title}` : `Complete ${task.title}`
+            task.status === 'completed'
+              ? strings.reopenTaskLabel(task.title)
+              : strings.completeTaskLabel(task.title)
           }
           onClick={() => onToggle(task)}
           disabled={task.status === 'archived'}
@@ -52,16 +68,20 @@ export function TaskItem({
             <strong className={task.status === 'completed' ? 'completed-text' : ''}>
               {task.title}
             </strong>
-            <span className="priority-badge">{task.priority}</span>
+            <span className="priority-badge">{priorityLabels[task.priority]}</span>
           </div>
           {task.notes && <p className="task-notes">{task.notes}</p>}
-          <div className="task-meta" aria-label="Task details">
+          <div className="task-meta" aria-label={strings.taskDetails}>
             {task.dueDate && (
-              <span className={isOverdue ? 'danger-text' : ''}>Due {formatDate(task.dueDate)}</span>
+              <span className={isOverdue ? 'danger-text' : ''}>
+                {strings.dueLabel(formatDate(task.dueDate))}
+              </span>
             )}
-            {task.reminderAt && <span>Reminder {formatDateTime(task.reminderAt)}</span>}
-            {task.project && <span>Project: {task.project}</span>}
-            {task.recurrence !== 'none' && <span>Repeats {task.recurrence}</span>}
+            {task.reminderAt && <span>{strings.reminderLabel(formatDateTime(task.reminderAt))}</span>}
+            {task.project && <span>{strings.projectLabel(task.project)}</span>}
+            {task.recurrence !== 'none' && (
+              <span>{strings.repeatsLabel(recurrenceLabels[task.recurrence])}</span>
+            )}
           </div>
           {task.tags.length > 0 && (
             <div className="tag-list">
@@ -73,14 +93,14 @@ export function TaskItem({
             </div>
           )}
         </div>
-        <div className="task-actions" aria-label={`Actions for ${task.title}`}>
+        <div className="task-actions" aria-label={strings.taskActionsLabel(task.title)}>
           {canReorder && (
             <>
               <button
                 className="icon-button"
                 type="button"
                 onClick={() => onMove(task, -1)}
-                aria-label="Move task up"
+                aria-label={strings.moveTaskUp}
               >
                 ↑
               </button>
@@ -88,7 +108,7 @@ export function TaskItem({
                 className="icon-button"
                 type="button"
                 onClick={() => onMove(task, 1)}
-                aria-label="Move task down"
+                aria-label={strings.moveTaskDown}
               >
                 ↓
               </button>
@@ -96,20 +116,20 @@ export function TaskItem({
           )}
           {task.status !== 'archived' && (
             <button className="ghost" type="button" onClick={() => onEdit(task)}>
-              Edit
+              {strings.edit}
             </button>
           )}
           {task.status === 'archived' ? (
             <button className="ghost" type="button" onClick={() => onRestore(task)}>
-              Restore
+              {strings.restore}
             </button>
           ) : (
             <button className="ghost" type="button" onClick={() => onArchive(task)}>
-              Archive
+              {strings.archive}
             </button>
           )}
           <button className="danger ghost" type="button" onClick={() => onDelete(task)}>
-            Delete
+            {strings.delete}
           </button>
         </div>
       </div>

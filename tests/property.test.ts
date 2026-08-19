@@ -69,10 +69,11 @@ describe('deterministic portability properties', () => {
   });
 
   it('rejects malformed structured CSV tag payloads instead of coercing them', () => {
-    const header = 'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n';
+    const header =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status,taskmintEncoding\r\n';
     for (const tags of ['json:', 'json:{}', 'json:[1,2]', 'json:["ok",3]', 'json:not-json']) {
       const escaped = `"${tags.replaceAll('"', '""')}"`;
-      const csv = `${header}Malformed tags,,medium,,,${escaped},,none,active`;
+      const csv = `${header}Malformed tags,,medium,,,${escaped},,none,active,safe-text-v1`;
       expect(() => csvToTasks(csv)).toThrow(/invalid structured tag field/i);
     }
   });

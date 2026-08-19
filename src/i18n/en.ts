@@ -25,6 +25,7 @@ export const strings = {
   priority: 'Priority',
   dueDate: 'Due date',
   reminder: 'Reminder',
+  reminderNotificationTitle: 'TaskMint reminder',
   project: 'Project',
   projectPlaceholder: 'e.g. School',
   tags: 'Tags',

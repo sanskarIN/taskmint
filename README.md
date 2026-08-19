@@ -27,8 +27,8 @@ Real release screenshots belong in `docs/screenshots/`. Until the first browser-
 - `Ctrl/Cmd+K` focuses search and `N` focuses the new-task title when the user is not already typing or inside a modal.
 - Native drag-and-drop plus keyboard-accessible move up/down controls.
 - Progressive 100-task rendering keeps large matching result sets bounded while preserving the full filtered count.
-- Offline-first IndexedDB persistence with a versioned schema and migration.
-- JSON backup/restore and CSV import/export with strict enum/date/field validation, duplicate-header checks, and size limits.
+- Offline-first IndexedDB persistence with a versioned schema, tested migration, and transactional multi-task writes.
+- JSON backup/restore and CSV import/export with strict enum/date/field validation, duplicate-header checks, size limits, lossless structured tags, legacy compatibility, and spreadsheet-formula neutralization.
 - Local productivity statistics: active/completed counts, due/overdue counts, seven-day completions, and completion rate.
 - Light, dark, and system themes plus reduced-motion support.
 - First-run onboarding, empty/loading/offline/error states, responsive layouts, and touch-friendly controls.
@@ -104,6 +104,12 @@ Or run the combined local suite:
 npm run check
 ```
 
+Run the non-gating 10,000-task domain benchmark separately:
+
+```bash
+npm run bench
+```
+
 End-to-end testing:
 
 ```bash
@@ -111,7 +117,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-The Chromium E2E suite covers the primary offline task journey, IndexedDB migration, keyboard shortcuts, JSON backup/delete/restore, progressive large-list rendering, and accessibility smoke checks. See [docs/testing.md](docs/testing.md).
+The automated suites cover the primary offline task journey, IndexedDB migration, transactional bulk-persistence expectations, keyboard shortcuts, JSON backup/delete/restore, CSV parser/property/security cases, release-guard behavior, progressive large-list rendering, and accessibility smoke checks. See [docs/testing.md](docs/testing.md).
 
 ## Production build and release
 
@@ -120,13 +126,19 @@ npm run build
 npm run preview
 ```
 
-For tags matching `v*.*.*`, the release workflow reruns `npm run check`, the high-severity npm audit, and Chromium E2E before publishing. A successful release contains the compressed web bundle and a SHA-256 checksum file. See [docs/release.md](docs/release.md).
+Before tagging, a real `package-lock.json` must be committed and the intended tag must exactly match `package.json`:
+
+```bash
+npm run release:check -- v0.1.0
+```
+
+For tags matching `v*.*.*`, the release workflow fails closed unless that release guard passes, installs with `npm ci`, reruns `npm run check`, the high-severity npm audit, and Chromium E2E, then publishes the compressed web bundle with a SHA-256 checksum. See [docs/release.md](docs/release.md).
 
 ## Architecture
 
 TaskMint is a modular client-side application:
 
-1. `src/domain/` contains task types, limits, typed user-safe errors, business rules, recurrence, filtering, validation, and statistics.
+1. `src/domain/` contains task types, limits, typed user-safe errors, business rules, recurrence, filtering, ordering, validation, and statistics.
 2. `src/storage/` owns Dexie schema versions, migrations, transactions, and repository operations.
 3. `src/utils/` contains data portability, keyboard, notification, and redacted logging helpers.
 4. `src/i18n/` contains the externalized English product string catalog, ready for additional locale packs.
@@ -137,7 +149,7 @@ See [docs/architecture.md](docs/architecture.md) and [docs/adr/](docs/adr/).
 
 ## Security and privacy
 
-TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files are validated and size-limited. Logging redacts common sensitive fields and is development-only. The production HTML shell uses a restrictive Content Security Policy; WebSocket and inline-style allowances used by Vite are injected only by the development server.
+TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files are validated and size-limited. New CSV exports neutralize spreadsheet-formula prefixes in user-controlled text while preserving exact TaskMint re-import. Logging redacts common sensitive fields and is development-only. The production HTML shell uses a restrictive Content Security Policy; WebSocket and inline-style allowances used by Vite are injected only by the development server.
 
 Repository CI also includes a deterministic common-secret-pattern guard as defense in depth, alongside CodeQL and the high-severity npm dependency audit.
 

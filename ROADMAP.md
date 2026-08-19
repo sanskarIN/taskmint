@@ -12,6 +12,9 @@ The roadmap favors coherent improvements over feature count.
 - [x] Date-sensitive views/statistics refresh while the app remains open
 - [x] IndexedDB persistence and schema migration
 - [x] Validated IndexedDB reads with fail-closed corrupt-data startup recovery
+- [x] Validated IndexedDB write boundaries for tasks, settings, batches, and replacements
+- [x] Full backup preflight validation before destructive restore transactions begin
+- [x] Duplicate task-ID rejection before bulk persistence
 - [x] Atomic multi-task writes for imports, recurring completion, and reordering
 - [x] JSON/CSV portability and local deletion
 - [x] Lossless versioned CSV tag encoding with legacy import compatibility
@@ -21,14 +24,16 @@ The roadmap favors coherent improvements over feature count.
 - [x] Strict shared limits and malformed import rejection
 - [x] Stable typed validation/import error codes and safe unknown-error UI fallbacks
 - [x] Locale-independent canonical tag normalization
-- [x] Development diagnostics that omit arbitrary exception-message content
+- [x] Development diagnostics that omit arbitrary exception messages and redact unknown event metadata by default
 - [x] Bounded browser-reminder delivery with count-only aggregation for excess due reminders
+- [x] Serialized task composer, task-row, onboarding, Settings, and PWA update actions to prevent duplicate pending mutations
 - [x] Responsive themes and accessibility baseline
 - [x] Externalized English product string catalog
 - [x] Progressive large-list rendering
 - [x] PWA configuration with explicit waiting/update prompt instead of automatic draft-destructive reloads
 - [x] Production CSP separated from Vite development-only relaxations
 - [x] Automated unit/component/parser-stress/property/download/CSP/repository/datetime/PWA/migration/corrupt-data/offline/backup/keyboard/accessibility/pagination tests
+- [x] Component regression coverage for duplicate submission/mutation/update locks and safe error states
 - [x] Repeatable 10,000-task filtering/statistics benchmark harness using the pinned Vitest 4 API
 - [x] Deterministic documentation-link and secret-pattern repository checks
 - [x] CI, E2E, CodeQL, Dependabot, release, and repository-governance automation baseline

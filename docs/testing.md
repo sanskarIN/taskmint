@@ -28,6 +28,7 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - malformed timestamp rejection
 - oversized backup-field rejection
 - CSV quoting and multiline round trips
+- deterministic stress round trips with commas, quotes, CR/LF content, Unicode, tags, projects, priorities, and recurrence
 - UTF-8 BOM headers
 - malformed enum/date rejection
 - duplicate CSV-column rejection
@@ -43,6 +44,7 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - `e2e/keyboard.spec.ts` verifies `Ctrl+K` search focus, `N` new-task focus, and typing-context protection.
 - `e2e/backup-restore.spec.ts` downloads a real JSON backup, deletes local data, restores the backup through the file input, and verifies the task returns.
 - `e2e/pagination.spec.ts` seeds 101 local tasks and verifies the UI renders 100 initially and progressively reveals the remainder.
+- `e2e/accessibility.spec.ts` checks core landmarks, rejects unnamed buttons/unlabeled interactive form controls, and verifies shortcut metadata on search/new-task inputs.
 
 Install Playwright's Chromium runtime before the first local E2E run:
 

@@ -20,9 +20,12 @@ The project follows Semantic Versioning for tagged releases.
 - Safe UI error formatting that exposes known validation failures while hiding unknown browser/IndexedDB infrastructure messages.
 - Externalized English UI string catalog for localization readiness.
 - Theme, reduced-motion, onboarding, responsive layout, About/support/funding UI, and local-data deletion.
-- Unit, component, data-portability, deterministic CSV stress, typed-error, download-lifecycle, keyboard, notification, CSP, migration, offline, backup/restore, accessibility, pagination, and Chromium E2E coverage.
+- Unit, component, data-portability, deterministic CSV stress/property, typed-error, download-lifecycle, repository, release-guard, keyboard, notification, CSP, migration, offline, backup/restore, accessibility, pagination, and Chromium E2E coverage.
+- Seeded deterministic data-portability properties covering hundreds of parser-sensitive CSV/JSON round trips.
+- Repeatable Vitest benchmark harness for 10,000-task filtering/sorting and productivity statistics.
 - Dependency-free Markdown relative-link validation through `npm run docs:check`.
 - Dependency-free common secret-pattern defense-in-depth scanning through `npm run secrets:check`.
+- Dependency-free release readiness guard through `npm run release:check -- vX.Y.Z`.
 - CI, E2E, CodeQL, Dependabot, and release workflows.
 - CI/CodeQL/E2E concurrency controls that cancel superseded runs on the same ref.
 - Tagged-release SHA-256 checksum generation for the packaged web artifact.
@@ -33,13 +36,15 @@ The project follows Semantic Versioning for tagged releases.
 ### Fixed
 
 - Reject malformed backup timestamps, impossible dates, invalid settings values, invalid task order values, duplicate backup task IDs, and oversized backup fields before restoring data.
-- Reject malformed CSV enums, dates, duplicate headers, and unterminated quoted fields instead of silently coercing invalid records.
+- Reject malformed CSV enums, dates, duplicate headers, malformed structured tag payloads, and unterminated quoted fields instead of silently coercing invalid records.
 - Accept a UTF-8 BOM on the first CSV header while retaining strict schema validation.
+- Preserve tags containing the legacy `|` separator by using a versioned `json:` tag-cell encoding in new CSV exports while keeping legacy imports compatible.
+- Reversibly neutralize spreadsheet-formula prefixes in exported task titles, notes, and project fields without altering legacy CSV import semantics.
 - Wrap malformed JSON parsing in a stable safe TaskMint backup error rather than exposing engine-specific parser text.
 - Preserve recurring reminder schedules for recurring tasks that do not have a due date.
 - Isolate browser notification-constructor failures so one failed notification cannot escape the reminder polling loop; failed deliveries remain eligible for a later retry.
 - Reject impossible calendar dates during normal task creation/update instead of silently dropping them.
-- Persist a recurring task completion and its generated next occurrence atomically.
+- Make every multi-task `putTasks` persistence operation explicitly transactional so import/reorder/recurring-completion failures cannot leave a partially written successful subset.
 - Surface IndexedDB failures for task create/edit/complete/reopen/archive/restore/delete/undo/reorder and local-data deletion before mutating React state.
 - Reset reminder-notification suppression only after a changed reminder is successfully persisted, preventing a failed edit from re-notifying the unchanged old reminder.
 - Reset the task composer after an edit so stale edited values cannot become an accidental new task.
@@ -55,13 +60,15 @@ The project follows Semantic Versioning for tagged releases.
 - Keep the committed production CSP at `style-src 'self'` and `connect-src 'self'`; Vite-only inline-style/WebSocket allowances are now injected only by the development server.
 - Keep executable scripts restricted to the application origin and continue blocking objects, foreign base URLs, and foreign form submissions.
 - Satisfy strict TypeScript override checks in the React error boundary.
-- Include E2E TypeScript files in the type-aware project and scope type-aware ESLint away from maintenance scripts.
+- Include E2E and benchmark TypeScript files in the type-aware project and scope type-aware ESLint away from maintenance scripts.
 
 ### Release hardening
 
-- `npm run check` now includes formatting invariants, documentation-link validation, secret-pattern validation, linting, TypeScript checks, unit/component tests, and the production build.
-- Pull-request CI runs the repository hygiene checks in addition to lint/type/test/build/audit gates.
-- Tagged releases must pass `npm run check`, `npm audit --audit-level=high`, Chromium installation, and Playwright E2E before GitHub Release publication.
+- `npm run check` includes formatting invariants, documentation-link validation, secret-pattern validation, linting, TypeScript checks, unit/component/property tests, and the production build.
+- Pull-request CI runs the repository hygiene checks in addition to lint/type/test/build/audit gates and automatically switches to `npm ci` once a lockfile is committed.
+- E2E workflow dependency installation also automatically switches to `npm ci` once a lockfile is committed.
+- Tagged releases fail closed unless the Git tag exactly matches `package.json` and a committed `package-lock.json` exists.
+- Tagged releases install dependencies with `npm ci --ignore-scripts`, then must pass `npm run check`, `npm audit --audit-level=high`, Chromium installation, and Playwright E2E before publication.
 - Tagged releases publish both the compressed web bundle and its SHA-256 checksum.
 - A real npm-generated `package-lock.json` remains required before the first release and will not be fabricated while registry access is unavailable.
 - Real release screenshots remain required from a browser-verified build and will not be fabricated.

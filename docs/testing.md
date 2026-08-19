@@ -1,6 +1,6 @@
 # Testing
 
-TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, and offline behavior as release-critical paths.
+TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, and offline behavior as release-critical paths.
 
 ## Unit/domain
 
@@ -17,6 +17,8 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - productivity statistics
 
 `tests/keyboard.test.ts` covers global shortcut resolution, modifier handling, editable-control protection, and modal blocking.
+
+`tests/notifications.test.ts` covers successful one-time due-reminder delivery and verifies that a throwing browser `Notification` constructor is isolated instead of escaping the reminder loop.
 
 ## Data portability
 

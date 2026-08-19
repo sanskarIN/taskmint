@@ -23,7 +23,6 @@ class ThrowingNotification {
 
 afterEach(() => {
   FakeNotification.calls = [];
-  vi.unstubAllGlobals();
 });
 
 describe('browser reminders', () => {

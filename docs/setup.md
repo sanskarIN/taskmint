@@ -1,8 +1,8 @@
 # TaskMint Setup Guide
 
-This guide covers development, production preview, test browser installation, and local PWA/storage inspection.
+This guide covers development, production preview, test browser installation, local PWA/storage inspection, and repository verification setup.
 
-For repository commands/CI policy see `operations.md`. For implementation rules see `development.md`.
+For repository commands/CI policy see `operations.md`. For implementation rules see `development.md`. For the complete tracked tree see `file-index.md`.
 
 ## 1. Requirements
 
@@ -14,6 +14,8 @@ For repository commands/CI policy see `operations.md`. For implementation rules 
 - modern browser
 
 The package engine requirement is defined in `package.json`.
+
+Git is required not only for normal source control: `npm run docs:inventory` uses `git ls-files` to verify the documentation inventory against the real tracked repository tree.
 
 ### For browser E2E
 
@@ -40,13 +42,16 @@ git clone https://github.com/sanskarIN/taskmint.git
 cd taskmint
 ```
 
+Run quality/documentation inventory commands from the Git checkout rather than from a copied source folder that lacks Git metadata.
+
 For contribution work, branch from the latest intended base rather than making unrelated changes directly on a release branch.
 
-## 3. Verify Node/npm
+## 3. Verify Node/npm/Git
 
 ```bash
 node --version
 npm --version
+git --version
 ```
 
 Node should satisfy:
@@ -83,7 +88,7 @@ Do not hand-create a lockfile.
 VITE_APP_NAME=TaskMint
 ```
 
-It also explicitly states that TaskMint currently requires no secrets/backend configuration.
+It also states that TaskMint currently requires no secrets/backend configuration.
 
 Ordinary `.env` files are ignored by Git.
 
@@ -101,7 +106,7 @@ Open the local URL printed by Vite.
 
 The committed `index.html` contains the restrictive production CSP.
 
-Vite serve mode injects only development-specific allowances required for style injection and HMR WebSockets. If HMR works differently from production, do not weaken the production CSP as a shortcut.
+Vite serve mode injects only development-specific allowances required for style injection and HMR WebSockets. If HMR works differently from production, do not weaken production CSP as a shortcut.
 
 ## 7. Production build
 
@@ -109,7 +114,7 @@ Vite serve mode injects only development-specific allowances required for style 
 npm run build
 ```
 
-This runs TypeScript project build checks and creates the Vite `dist/` output.
+This runs TypeScript project build checks and creates Vite `dist/` output.
 
 `dist/` is generated and ignored by Git.
 
@@ -129,15 +134,24 @@ Run the combined non-E2E quality suite:
 npm run check
 ```
 
-It includes:
+It includes, in order:
 
-- format invariants;
-- documentation links;
-- secret-pattern guard;
-- ESLint;
-- TypeScript;
-- Vitest;
-- production build.
+1. format invariants;
+2. documentation links;
+3. complete documentation inventory;
+4. secret-pattern guard;
+5. ESLint;
+6. TypeScript;
+7. Vitest;
+8. production build.
+
+The documentation inventory is also independently runnable:
+
+```bash
+npm run docs:inventory
+```
+
+It checks `git ls-files` against `docs/file-index.md` and verifies the current automated-test paths in `docs/test-matrix.md`.
 
 Dependency audit is separate:
 
@@ -200,7 +214,7 @@ An editor with EditorConfig + Prettier + TypeScript/ESLint integration is conven
 
 Use browser developer tools -> Application/Storage to inspect local TaskMint browser state.
 
-Expected storage areas include:
+Expected areas include:
 
 - IndexedDB database `taskmint`;
 - PWA service worker;
@@ -230,7 +244,7 @@ Then inspect:
 3. service worker registers;
 4. application shell can reload after cached while offline;
 5. local task data persists through IndexedDB;
-6. update behavior uses a waiting prompt rather than automatic page reload;
+6. update behavior uses a waiting prompt rather than automatic reload;
 7. Update now activates the waiting worker;
 8. unsaved form input is not unexpectedly replaced by automatic service-worker activation.
 
@@ -243,11 +257,11 @@ For manual testing:
 1. run production preview;
 2. load TaskMint once online so assets can be cached;
 3. use browser network/offline controls;
-4. reload/open supported cached shell;
+4. reload/open the supported cached shell;
 5. create/complete/edit local tasks as appropriate;
 6. restore network and verify state remains local/intact.
 
-Remember: `navigator.onLine` is a coarse browser signal, not a guarantee that every network path is reachable.
+`navigator.onLine` is a coarse browser signal, not a guarantee that every network path is reachable.
 
 ## 16. Notification testing
 
@@ -282,9 +296,25 @@ Test:
 - invalid row reporting;
 - merge into existing tasks/manual order.
 
+### Same-file retry
+
+Choose the same JSON/CSV file again after an import completes/fails. Current Settings clears the hidden file-input value before async processing settles, so reselecting the same path should remain possible.
+
 Do not use private personal task exports in public bug reports/screenshots.
 
-## 18. Troubleshooting dependency installation
+## 18. Documentation inventory setup troubleshooting
+
+If `npm run docs:inventory` fails because Git metadata is unavailable, verify you are running inside an actual clone with `.git` information accessible.
+
+If it reports an undocumented tracked path:
+
+- add the exact path to `docs/file-index.md`;
+- update `docs/repository-reference.md` when its responsibility/coupling needs documentation;
+- update `docs/test-matrix.md` when it is a test/E2E/benchmark/shared test setup path.
+
+Do not remove the check merely because a newly added file was forgotten in documentation.
+
+## 19. Troubleshooting dependency installation
 
 If install fails:
 
@@ -296,7 +326,7 @@ If install fails:
 
 See `troubleshooting.md`.
 
-## 19. Clean generated outputs
+## 20. Clean generated outputs
 
 Generated/local paths include:
 
@@ -304,17 +334,18 @@ Generated/local paths include:
 - `dist/`
 - `coverage/`
 - `playwright-report/`
-- `test-results/`
+- `test-results/`.
 
 They are ignored by Git and can be regenerated from source/tooling.
 
 Be careful not to confuse deleting generated output with deleting browser IndexedDB user data.
 
-## 20. Setup completion checklist
+## 21. Setup completion checklist
 
 A development environment is ready when you can:
 
 - run `npm run dev`;
+- run `npm run docs:inventory` inside the Git checkout;
 - run `npm run typecheck`;
 - run `npm test`;
 - run `npm run build`;

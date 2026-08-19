@@ -1,5 +1,5 @@
 import { normalizeDuplicateTaskOrders } from '../domain/order';
-import { validateSettings, validateTask } from '../domain/validation';
+import { validateBackup, validateSettings, validateTask } from '../domain/validation';
 import type { AppSettings, Task, TaskBackup } from '../domain/types';
 import { db, type TaskMintDatabase } from './db';
 
@@ -53,10 +53,11 @@ export class TaskRepository {
   }
 
   async restoreBackup(backup: TaskBackup): Promise<void> {
+    const validatedBackup = validateBackup(backup);
     await this.database.transaction('rw', this.database.tasks, this.database.settings, async () => {
       await this.database.tasks.clear();
-      if (backup.tasks.length) await this.database.tasks.bulkPut(backup.tasks);
-      if (backup.settings) await this.database.settings.put(backup.settings);
+      if (validatedBackup.tasks.length) await this.database.tasks.bulkPut(validatedBackup.tasks);
+      if (validatedBackup.settings) await this.database.settings.put(validatedBackup.settings);
     });
   }
 

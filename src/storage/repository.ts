@@ -21,7 +21,10 @@ export class TaskRepository {
   }
 
   async putTasks(tasks: Task[]): Promise<void> {
-    await this.database.tasks.bulkPut(tasks);
+    if (tasks.length === 0) return;
+    await this.database.transaction('rw', this.database.tasks, async () => {
+      await this.database.tasks.bulkPut(tasks);
+    });
   }
 
   async deleteTask(id: string): Promise<void> {

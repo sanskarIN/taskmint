@@ -92,6 +92,7 @@ export const strings = {
   onboardingSaveError: 'Could not save the onboarding setting. Please try again.',
   closeSettings: 'Close settings',
   settingsSaveError: 'That setting could not be saved. Your existing local data was left in place.',
+  exportError: 'Could not create that export in this browser. Your local data was left unchanged.',
   appearanceAccessibility: 'Appearance & accessibility',
   theme: 'Theme',
   themeSystem: 'System',

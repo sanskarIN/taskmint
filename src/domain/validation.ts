@@ -97,7 +97,7 @@ export function validateTask(value: unknown): Task {
   };
 }
 
-function validateSettings(value: unknown): AppSettings {
+export function validateSettings(value: unknown): AppSettings {
   if (!isRecord(value)) fail('backup-settings-invalid');
   const theme =
     value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'

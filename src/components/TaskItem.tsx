@@ -19,6 +19,7 @@ interface Props {
   task: Task;
   isOverdue: boolean;
   canReorder: boolean;
+  disabled?: boolean;
   onToggle: (task: Task) => Promise<void>;
   onEdit: (task: Task) => void;
   onArchive: (task: Task) => Promise<void>;
@@ -33,6 +34,7 @@ export function TaskItem({
   task,
   isOverdue,
   canReorder,
+  disabled = false,
   onToggle,
   onEdit,
   onArchive,
@@ -44,9 +46,10 @@ export function TaskItem({
 }: Props) {
   const mutationLock = useRef(false);
   const [busy, setBusy] = useState(false);
+  const interactionDisabled = busy || disabled;
 
   async function runMutation(action: () => Promise<void>) {
-    if (mutationLock.current) return;
+    if (mutationLock.current || disabled) return;
     mutationLock.current = true;
     setBusy(true);
     try {
@@ -60,13 +63,14 @@ export function TaskItem({
   return (
     <li
       className={`task-card card priority-${task.priority}`}
-      draggable={canReorder && !busy}
+      draggable={canReorder && !interactionDisabled}
       aria-busy={busy}
+      aria-disabled={disabled || undefined}
       onDragStart={() => {
-        if (!busy) onDragStart(task);
+        if (!interactionDisabled) onDragStart(task);
       }}
       onDragOver={(event) => {
-        if (!busy) event.preventDefault();
+        if (!interactionDisabled) event.preventDefault();
       }}
       onDrop={() => void runMutation(() => onDrop(task))}
     >
@@ -80,7 +84,7 @@ export function TaskItem({
               : strings.completeTaskLabel(task.title)
           }
           onClick={() => void runMutation(() => onToggle(task))}
-          disabled={busy || task.status === 'archived'}
+          disabled={interactionDisabled || task.status === 'archived'}
         >
           {task.status === 'completed' ? '✓' : ''}
         </button>
@@ -122,7 +126,7 @@ export function TaskItem({
                 type="button"
                 onClick={() => void runMutation(() => onMove(task, -1))}
                 aria-label={strings.moveTaskUp}
-                disabled={busy}
+                disabled={interactionDisabled}
               >
                 ↑
               </button>
@@ -131,14 +135,19 @@ export function TaskItem({
                 type="button"
                 onClick={() => void runMutation(() => onMove(task, 1))}
                 aria-label={strings.moveTaskDown}
-                disabled={busy}
+                disabled={interactionDisabled}
               >
                 ↓
               </button>
             </>
           )}
           {task.status !== 'archived' && (
-            <button className="ghost" type="button" onClick={() => onEdit(task)} disabled={busy}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => onEdit(task)}
+              disabled={interactionDisabled}
+            >
               {strings.edit}
             </button>
           )}
@@ -147,7 +156,7 @@ export function TaskItem({
               className="ghost"
               type="button"
               onClick={() => void runMutation(() => onRestore(task))}
-              disabled={busy}
+              disabled={interactionDisabled}
             >
               {strings.restore}
             </button>
@@ -156,7 +165,7 @@ export function TaskItem({
               className="ghost"
               type="button"
               onClick={() => void runMutation(() => onArchive(task))}
-              disabled={busy}
+              disabled={interactionDisabled}
             >
               {strings.archive}
             </button>
@@ -165,7 +174,7 @@ export function TaskItem({
             className="danger ghost"
             type="button"
             onClick={() => void runMutation(() => onDelete(task))}
-            disabled={busy}
+            disabled={interactionDisabled}
           >
             {strings.delete}
           </button>

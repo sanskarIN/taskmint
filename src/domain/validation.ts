@@ -67,7 +67,7 @@ export function validateTask(value: unknown): Task {
   if (!Array.isArray(value.tags)) fail('backup-task-tags-invalid');
   const normalizedTags = value.tags.map((tag) => {
     if (typeof tag !== 'string') fail('backup-task-tag-invalid');
-    const normalized = tag.trim().toLocaleLowerCase();
+    const normalized = tag.trim().toLowerCase();
     if (!normalized || normalized.length > TASK_LIMITS.tag) fail('backup-task-tag-invalid');
     return normalized;
   });

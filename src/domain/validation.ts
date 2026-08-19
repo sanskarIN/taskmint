@@ -1,6 +1,7 @@
 import { parseStrictDateTime } from './datetime';
 import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
+import { normalizeDuplicateTaskOrders } from './order';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from './types';
 
 const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
@@ -28,7 +29,7 @@ export function validateBackup(input: unknown): TaskBackup {
     app: 'TaskMint',
     schemaVersion: 2,
     exportedAt,
-    tasks,
+    tasks: normalizeDuplicateTaskOrders(tasks),
     ...(settings ? { settings } : {})
   };
 }

@@ -60,7 +60,7 @@ TaskMint targets modern evergreen browsers on Windows, macOS, and Linux. It can 
 - ESLint + typescript-eslint + Prettier
 - GitHub Actions + CodeQL
 
-Dependencies are pinned to exact top-level versions in `package.json`.
+Dependencies are pinned to exact top-level versions in `package.json`. A real npm-generated `package-lock.json` is a release requirement and must not be fabricated manually.
 
 ## Quick start
 
@@ -90,10 +90,18 @@ See [docs/setup.md](docs/setup.md) and [docs/development.md](docs/development.md
 
 ```bash
 npm run format:check
+npm run docs:check
+npm run secrets:check
 npm run lint
 npm run typecheck
 npm test
 npm run build
+```
+
+Or run the combined local suite:
+
+```bash
+npm run check
 ```
 
 End-to-end testing:
@@ -103,7 +111,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-The Chromium E2E suite covers the primary offline task journey, IndexedDB migration, keyboard shortcuts, JSON backup/delete/restore, and progressive large-list rendering. See [docs/testing.md](docs/testing.md).
+The Chromium E2E suite covers the primary offline task journey, IndexedDB migration, keyboard shortcuts, JSON backup/delete/restore, progressive large-list rendering, and accessibility smoke checks. See [docs/testing.md](docs/testing.md).
 
 ## Production build and release
 
@@ -112,13 +120,13 @@ npm run build
 npm run preview
 ```
 
-The release workflow runs the complete quality suite for tags matching `v*.*.*` and publishes the built web bundle as a GitHub Release artifact. See [docs/release.md](docs/release.md).
+For tags matching `v*.*.*`, the release workflow reruns `npm run check`, the high-severity npm audit, and Chromium E2E before publishing. A successful release contains the compressed web bundle and a SHA-256 checksum file. See [docs/release.md](docs/release.md).
 
 ## Architecture
 
 TaskMint is a modular client-side application:
 
-1. `src/domain/` contains task types, limits, business rules, recurrence, filtering, validation, and statistics.
+1. `src/domain/` contains task types, limits, typed user-safe errors, business rules, recurrence, filtering, validation, and statistics.
 2. `src/storage/` owns Dexie schema versions, migrations, transactions, and repository operations.
 3. `src/utils/` contains data portability, keyboard, notification, and redacted logging helpers.
 4. `src/i18n/` contains the externalized English product string catalog, ready for additional locale packs.
@@ -129,7 +137,9 @@ See [docs/architecture.md](docs/architecture.md) and [docs/adr/](docs/adr/).
 
 ## Security and privacy
 
-TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files are validated and size-limited. Logging redacts common sensitive fields and is development-only. The HTML shell defines a restrictive Content Security Policy.
+TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files are validated and size-limited. Logging redacts common sensitive fields and is development-only. The production HTML shell uses a restrictive Content Security Policy; WebSocket and inline-style allowances used by Vite are injected only by the development server.
+
+Repository CI also includes a deterministic common-secret-pattern guard as defense in depth, alongside CodeQL and the high-severity npm dependency audit.
 
 Browser notifications are optional. Because browsers do not provide a reliable cross-platform local background scheduler for a closed PWA, reminders are checked while TaskMint is open; this limitation is documented rather than hidden.
 

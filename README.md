@@ -24,15 +24,26 @@ Real release screenshots belong in `docs/screenshots/`. Until the first browser-
 - Priorities, due dates, optional reminders, projects, tags, notes, and recurring tasks.
 - Smart views for Inbox, Today, Upcoming, Overdue, Completed, Archived, and All Tasks.
 - Search, tag/project/priority filters, manual ordering, and useful sort modes.
+- `Ctrl/Cmd+K` focuses search and `N` focuses the new-task title when the user is not already typing or inside a modal.
 - Native drag-and-drop plus keyboard-accessible move up/down controls.
+- Progressive 100-task rendering keeps large matching result sets bounded while preserving the full filtered count.
 - Offline-first IndexedDB persistence with a versioned schema and migration.
-- JSON backup/restore and CSV import/export with input validation and size limits.
+- JSON backup/restore and CSV import/export with strict enum/date/field validation, duplicate-header checks, and size limits.
 - Local productivity statistics: active/completed counts, due/overdue counts, seven-day completions, and completion rate.
 - Light, dark, and system themes plus reduced-motion support.
 - First-run onboarding, empty/loading/offline/error states, responsive layouts, and touch-friendly controls.
 - Optional browser notifications that are requested only after explicit user action.
 - One-click local data deletion with a warning and backup-first workflow.
 - Installable PWA with generated service worker and manifest.
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+K` / `Cmd+K` | Focus and select task search |
+| `N` | Focus the new-task title when focus is outside an editable control |
+
+Shortcuts are suspended while onboarding or Settings is open so modal keyboard behavior remains predictable.
 
 ## Supported platforms
 
@@ -92,7 +103,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-See [docs/testing.md](docs/testing.md).
+The Chromium E2E suite covers the primary offline task journey, IndexedDB migration, keyboard shortcuts, JSON backup/delete/restore, and progressive large-list rendering. See [docs/testing.md](docs/testing.md).
 
 ## Production build and release
 
@@ -107,11 +118,12 @@ The release workflow runs the complete quality suite for tags matching `v*.*.*` 
 
 TaskMint is a modular client-side application:
 
-1. `src/domain/` contains task types, business rules, recurrence, filtering, validation, and statistics.
+1. `src/domain/` contains task types, limits, business rules, recurrence, filtering, validation, and statistics.
 2. `src/storage/` owns Dexie schema versions, migrations, transactions, and repository operations.
-3. `src/utils/` contains data portability, notification, and redacted logging helpers.
-4. `src/components/` contains accessible React UI modules.
-5. `src/App.tsx` coordinates application state and use cases without moving persistence rules into presentation components.
+3. `src/utils/` contains data portability, keyboard, notification, and redacted logging helpers.
+4. `src/i18n/` contains the externalized English product string catalog, ready for additional locale packs.
+5. `src/components/` contains accessible React UI modules.
+6. `src/App.tsx` coordinates application state and use cases without moving persistence rules into presentation components.
 
 See [docs/architecture.md](docs/architecture.md) and [docs/adr/](docs/adr/).
 
@@ -125,7 +137,7 @@ Read [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Accessibility
 
-TaskMint includes visible focus styles, semantic form controls, keyboard-accessible ordering, reduced motion, non-color-only labels, responsive touch targets, and ARIA announcements for transient status messages. See [docs/accessibility.md](docs/accessibility.md).
+TaskMint includes visible focus styles, semantic form controls, keyboard-accessible ordering, keyboard shortcuts with modal/typing safeguards, reduced motion, non-color-only labels, 40px-or-larger primary task controls, responsive touch targets, and ARIA announcements for transient status messages. See [docs/accessibility.md](docs/accessibility.md).
 
 ## Contributing
 

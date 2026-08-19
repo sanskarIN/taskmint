@@ -1,15 +1,21 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent, type Ref } from 'react';
 import { TASK_LIMITS } from '../domain/limits';
 import type { Recurrence, Task, TaskDraft } from '../domain/types';
 import { strings } from '../i18n/en';
 
 interface Props {
   editingTask?: Task | null;
+  titleInputRef?: Ref<HTMLInputElement>;
   onSubmit: (draft: TaskDraft) => Promise<void>;
   onCancelEdit?: () => void;
 }
 
-export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Props) {
+export function TaskComposer({
+  editingTask = null,
+  titleInputRef,
+  onSubmit,
+  onCancelEdit
+}: Props) {
   const formId = useId();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -91,6 +97,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
           {strings.taskTitle}
         </label>
         <input
+          ref={titleInputRef}
           id={`${formId}-title`}
           className="title-input"
           value={title}
@@ -100,6 +107,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
           maxLength={TASK_LIMITS.title}
           required
           autoComplete="off"
+          aria-keyshortcuts="N"
         />
         <button className="primary" type="submit">
           {editingTask ? strings.saveChanges : strings.addTask}

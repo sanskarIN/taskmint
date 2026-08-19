@@ -37,6 +37,15 @@ describe('task domain', () => {
     expect(task.status).toBe('active');
   });
 
+  it('normalizes stored tags without depending on the host locale', () => {
+    const localeLowercase = vi
+      .spyOn(String.prototype, 'toLocaleLowerCase')
+      .mockImplementation(() => 'locale-specific-value');
+    const task = createTask({ title: 'Locale-safe tags', tags: ['WORK', 'Deep'] });
+    expect(task.tags).toEqual(['work', 'deep']);
+    expect(localeLowercase).not.toHaveBeenCalled();
+  });
+
   it('clamps monthly recurrence to month end', () => {
     const next = addRecurrence(new Date(2026, 0, 31, 12), 'monthly');
     expect(next.getFullYear()).toBe(2026);

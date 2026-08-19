@@ -5,24 +5,28 @@ import type { TaskMintDatabase } from '../src/storage/db';
 import { TaskRepository, defaultSettings } from '../src/storage/repository';
 
 function repositoryHarness() {
+  const putTask = vi.fn(async (_task: Task) => undefined);
   const bulkPut = vi.fn(async (_tasks: Task[]) => undefined);
   const toArray = vi.fn(async (): Promise<Task[]> => []);
   const getSettings = vi.fn(async (): Promise<AppSettings | undefined> => undefined);
+  const putSettings = vi.fn(async (_settings: AppSettings) => undefined);
   const transaction = vi.fn(
     async (_mode: string, _table: unknown, scope: () => Promise<void>): Promise<void> => {
       await scope();
     }
   );
   const database = {
-    tasks: { bulkPut, toArray },
-    settings: { get: getSettings },
+    tasks: { put: putTask, bulkPut, toArray },
+    settings: { get: getSettings, put: putSettings },
     transaction
   } as unknown as TaskMintDatabase;
   return {
     repository: new TaskRepository(database),
+    putTask,
     bulkPut,
     toArray,
     getSettings,
+    putSettings,
     transaction
   };
 }
@@ -57,6 +61,27 @@ describe('TaskRepository validated reads', () => {
   });
 });
 
+describe('TaskRepository validated writes', () => {
+  it('rejects a malformed single task before writing it', async () => {
+    const { repository, putTask } = repositoryHarness();
+    const malformed = {
+      ...createTask({ title: 'Invalid write' }),
+      reminderAt: '2026-02-31T10:00:00Z'
+    };
+
+    await expect(repository.putTask(malformed)).rejects.toThrow(/reminderAt/i);
+    expect(putTask).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed settings before writing them', async () => {
+    const { repository, putSettings } = repositoryHarness();
+    const malformed = { ...defaultSettings, theme: 'neon' as AppSettings['theme'] };
+
+    await expect(repository.saveSettings(malformed)).rejects.toThrow(/theme/i);
+    expect(putSettings).not.toHaveBeenCalled();
+  });
+});
+
 describe('TaskRepository bulk persistence', () => {
   it('wraps bulk task writes in a read-write transaction', async () => {
     const { repository, bulkPut, transaction } = repositoryHarness();
@@ -67,6 +92,16 @@ describe('TaskRepository bulk persistence', () => {
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(transaction.mock.calls[0]?.[0]).toBe('rw');
     expect(bulkPut).toHaveBeenCalledWith(tasks);
+  });
+
+  it('validates the whole batch before opening a transaction', async () => {
+    const { repository, bulkPut, transaction } = repositoryHarness();
+    const valid = createTask({ title: 'Valid' });
+    const malformed = { ...createTask({ title: 'Invalid' }), order: 1.5 };
+
+    await expect(repository.putTasks([valid, malformed])).rejects.toThrow(/order/i);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(bulkPut).not.toHaveBeenCalled();
   });
 
   it('propagates bulk failures instead of reporting a successful write', async () => {

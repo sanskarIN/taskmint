@@ -11,7 +11,7 @@
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "node scripts/check-format.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

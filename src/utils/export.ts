@@ -1,4 +1,4 @@
-import { fail } from '../domain/errors';
+import { TaskMintError, fail } from '../domain/errors';
 import { TASK_LIMITS } from '../domain/limits';
 import { createTask } from '../domain/task';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from '../domain/types';
@@ -129,7 +129,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
         priority,
         dueDate: value('dueDate') || null,
         reminderAt: value('reminderAt') || null,
-        tags: decodeCsvTags(value('tags')),
+        tags: decodeCsvTags(value('tags'), encoding),
         project: decodeSpreadsheetText(value('project'), encoding),
         recurrence
       },
@@ -145,7 +145,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
     }
     return task;
   } catch (error) {
-    const causeMessage = error instanceof Error ? error.message : 'Invalid task data.';
+    const causeMessage = error instanceof TaskMintError ? error.message : 'Invalid task data.';
     fail('csv-row-invalid', { row: rowNumber, causeMessage });
   }
 }
@@ -154,9 +154,11 @@ function encodeCsvTags(tags: string[]): string {
   return `${structuredTagsPrefix}${JSON.stringify(tags)}`;
 }
 
-function decodeCsvTags(value: string): string[] {
+function decodeCsvTags(value: string, encoding: string): string[] {
   if (!value) return [];
-  if (!value.startsWith(structuredTagsPrefix)) return value.split('|').filter(Boolean);
+  if (encoding !== csvEncodingValue || !value.startsWith(structuredTagsPrefix)) {
+    return value.split('|').filter(Boolean);
+  }
 
   try {
     const parsed = JSON.parse(value.slice(structuredTagsPrefix.length)) as unknown;

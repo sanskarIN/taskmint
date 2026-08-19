@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTask } from '../src/domain/task';
-import { notifyDueTasks } from '../src/utils/notifications';
+import { REMINDER_NOTIFICATION_BATCH, notifyDueTasks } from '../src/utils/notifications';
 
 class FakeNotification {
   static permission: NotificationPermission = 'granted';
@@ -21,8 +21,20 @@ class ThrowingNotification {
   }
 }
 
+class SummaryThrowingNotification {
+  static permission: NotificationPermission = 'granted';
+  static requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
+  static calls: Array<{ title: string; options?: NotificationOptions }> = [];
+
+  constructor(title: string, options?: NotificationOptions) {
+    if (options?.tag === 'taskmint-reminder-summary') throw new Error('Summary delivery failed');
+    SummaryThrowingNotification.calls.push({ title, options });
+  }
+}
+
 afterEach(() => {
   FakeNotification.calls = [];
+  SummaryThrowingNotification.calls = [];
 });
 
 describe('browser reminders', () => {
@@ -56,5 +68,46 @@ describe('browser reminders', () => {
 
     const notified = notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'));
     expect(notified.has(task.id)).toBe(false);
+  });
+
+  it('aggregates reminders beyond the individual batch limit', () => {
+    vi.stubGlobal('Notification', FakeNotification);
+    const now = new Date('2026-08-19T10:00:00.000Z');
+    const tasks = Array.from({ length: REMINDER_NOTIFICATION_BATCH + 7 }, (_, index) =>
+      createTask(
+        { title: `Due ${index}`, reminderAt: '2026-08-19T09:00:00.000Z' },
+        new Date('2026-08-19T08:00:00.000Z'),
+        index * 1000
+      )
+    );
+
+    const notified = notifyDueTasks(tasks, new Set(), now);
+
+    expect(FakeNotification.calls).toHaveLength(REMINDER_NOTIFICATION_BATCH + 1);
+    expect(FakeNotification.calls.at(-1)).toMatchObject({
+      title: 'TaskMint reminder',
+      options: {
+        body: '7 more due reminders are waiting in TaskMint.',
+        tag: 'taskmint-reminder-summary'
+      }
+    });
+    expect(notified.size).toBe(tasks.length);
+  });
+
+  it('keeps summarized reminders retryable when the summary notification fails', () => {
+    vi.stubGlobal('Notification', SummaryThrowingNotification);
+    const now = new Date('2026-08-19T10:00:00.000Z');
+    const tasks = Array.from({ length: REMINDER_NOTIFICATION_BATCH + 2 }, (_, index) =>
+      createTask(
+        { title: `Due ${index}`, reminderAt: '2026-08-19T09:00:00.000Z' },
+        new Date('2026-08-19T08:00:00.000Z'),
+        index * 1000
+      )
+    );
+
+    const notified = notifyDueTasks(tasks, new Set(), now);
+
+    expect(notified.size).toBe(REMINDER_NOTIFICATION_BATCH);
+    expect(notified.has(tasks.at(-1)!.id)).toBe(false);
   });
 });

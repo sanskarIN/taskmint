@@ -23,18 +23,18 @@ Real release screenshots belong in `docs/screenshots/`. Until the first browser-
 - Create, edit, complete, reopen, archive, restore, and delete tasks.
 - Priorities, due dates, optional reminders, projects, tags, notes, and recurring tasks.
 - Smart views for Inbox, Today, Upcoming, Overdue, Completed, Archived, and All Tasks.
-- Search, tag/project/priority filters, manual ordering, and useful sort modes.
+- Search, tag/project/priority filters, deterministic manual ordering, and useful sort modes.
 - `Ctrl/Cmd+K` focuses search and `N` focuses the new-task title when the user is not already typing or inside a modal.
 - Native drag-and-drop plus keyboard-accessible move up/down controls.
 - Progressive 100-task rendering keeps large matching result sets bounded while preserving the full filtered count.
-- Offline-first IndexedDB persistence with a versioned schema, tested migration, and transactional multi-task writes.
-- JSON backup/restore and CSV import/export with strict enum/date/field validation, duplicate-header checks, size limits, lossless structured tags, legacy compatibility, and spreadsheet-formula neutralization.
-- Local productivity statistics: active/completed counts, due/overdue counts, seven-day completions, and completion rate.
+- Offline-first IndexedDB persistence with a versioned schema, tested migration, transactional multi-task writes, validated reads, and fail-closed recovery when local data is malformed.
+- JSON backup/restore and CSV import/export with strict enum/calendar/timestamp/field validation, safe-integer ordering, duplicate-header checks, strict quote placement, explicit CSV encoding versions, size limits, lossless structured tags, legacy compatibility, and spreadsheet-formula neutralization.
+- Local productivity statistics: active/completed counts, due/overdue counts, bounded seven-day completions, and completion rate.
 - Light, dark, and system themes plus reduced-motion support.
 - First-run onboarding, empty/loading/offline/error states, responsive layouts, and touch-friendly controls.
-- Optional browser notifications that are requested only after explicit user action.
+- Optional browser notifications requested only after explicit user action; large due-reminder bursts are bounded to a small individual batch plus one title-free summary notification.
 - One-click local data deletion with a warning and backup-first workflow.
-- Installable PWA with generated service worker and manifest.
+- Installable PWA with generated service worker/manifest and an explicit update prompt that waits for the user instead of automatically reloading over unsaved task input.
 
 ## Keyboard shortcuts
 
@@ -117,7 +117,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-The automated suites cover the primary offline task journey, IndexedDB migration, transactional bulk-persistence expectations, keyboard shortcuts, JSON backup/delete/restore, CSV parser/property/security cases, release-guard behavior, progressive large-list rendering, and accessibility smoke checks. See [docs/testing.md](docs/testing.md).
+The automated suites cover the primary offline task journey, IndexedDB migration/corruption recovery, transactional bulk-persistence expectations, keyboard shortcuts, settings/export failure recovery, JSON backup/delete/restore, strict CSV compatibility/quoting/property/security cases, strict timestamps, reminder aggregation, PWA update wiring, release-guard behavior, progressive large-list rendering, and accessibility smoke checks. See [docs/testing.md](docs/testing.md).
 
 ## Production build and release
 
@@ -138,18 +138,20 @@ For tags matching `v*.*.*`, the release workflow fails closed unless that releas
 
 TaskMint is a modular client-side application:
 
-1. `src/domain/` contains task types, limits, typed user-safe errors, business rules, recurrence, filtering, ordering, validation, and statistics.
-2. `src/storage/` owns Dexie schema versions, migrations, transactions, and repository operations.
-3. `src/utils/` contains data portability, keyboard, notification, and redacted logging helpers.
+1. `src/domain/` contains task types, limits, strict datetime parsing, safe ordering, typed user-safe errors, business rules, recurrence, filtering, validation, and statistics.
+2. `src/storage/` owns Dexie schema versions, migrations, transactions, repository operations, and validation of persisted records before they enter UI state.
+3. `src/utils/` contains data portability, keyboard, bounded notification, and content-safe development logging helpers.
 4. `src/i18n/` contains the externalized English product string catalog, ready for additional locale packs.
-5. `src/components/` contains accessible React UI modules.
+5. `src/components/` contains accessible React UI modules, including the explicit PWA update prompt.
 6. `src/App.tsx` coordinates application state and use cases without moving persistence rules into presentation components.
 
 See [docs/architecture.md](docs/architecture.md) and [docs/adr/](docs/adr/).
 
 ## Security and privacy
 
-TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files are validated and size-limited. New CSV exports neutralize spreadsheet-formula prefixes in user-controlled text while preserving exact TaskMint re-import. Logging redacts common sensitive fields and is development-only. The production HTML shell uses a restrictive Content Security Policy; WebSocket and inline-style allowances used by Vite are injected only by the development server.
+TaskMint is local-first: it does not require a backend or user account and does not intentionally transmit task content. Imported files and local persisted rows are validated before use. New CSV exports neutralize spreadsheet-formula prefixes in user-controlled text while preserving TaskMint re-import, and malformed quoting/unknown TaskMint encoding versions are rejected instead of silently coerced. Development logging redacts metadata and does not print arbitrary exception messages. The production HTML shell uses a restrictive Content Security Policy; WebSocket and inline-style allowances used by Vite are injected only by the development server.
+
+If current IndexedDB data cannot be validated safely, TaskMint blocks the normal editor and leaves the stored browser data untouched rather than presenting an empty-looking writable state.
 
 Repository CI also includes a deterministic common-secret-pattern guard as defense in depth, alongside CodeQL and the high-severity npm dependency audit.
 
@@ -159,7 +161,7 @@ Read [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Accessibility
 
-TaskMint includes visible focus styles, semantic form controls, keyboard-accessible ordering, keyboard shortcuts with modal/typing safeguards, reduced motion, non-color-only labels, 40px-or-larger primary task controls, responsive touch targets, and ARIA announcements for transient status messages. See [docs/accessibility.md](docs/accessibility.md).
+TaskMint includes visible focus styles, semantic form controls, keyboard-accessible ordering, keyboard shortcuts with modal/typing safeguards, reduced motion, non-color-only labels, 40px-or-larger primary task controls, responsive touch targets, ARIA announcements for transient status/update messages, and a fail-closed recovery screen that does not expose unsafe editing controls. See [docs/accessibility.md](docs/accessibility.md).
 
 ## Contributing
 

@@ -15,6 +15,7 @@ const csvHeaders = [
   'recurrence',
   'status'
 ] as const;
+const structuredTagsPrefix = 'json:';
 
 const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
 const recurrences = new Set<Recurrence>(['none', 'daily', 'weekly', 'monthly']);
@@ -55,7 +56,7 @@ export function tasksToCsv(tasks: Task[]): string {
         task.priority,
         task.dueDate ?? '',
         task.reminderAt ?? '',
-        JSON.stringify(task.tags),
+        encodeCsvTags(task.tags),
         task.project,
         task.recurrence,
         task.status
@@ -122,7 +123,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
         priority,
         dueDate: value('dueDate') || null,
         reminderAt: value('reminderAt') || null,
-        tags: parseCsvTags(value('tags')),
+        tags: decodeCsvTags(value('tags')),
         project: value('project'),
         recurrence
       },
@@ -143,18 +144,21 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
   }
 }
 
-function parseCsvTags(value: string): string[] {
+function encodeCsvTags(tags: string[]): string {
+  return `${structuredTagsPrefix}${JSON.stringify(tags)}`;
+}
+
+function decodeCsvTags(value: string): string[] {
   if (!value) return [];
-  const trimmed = value.trim();
-  if (trimmed.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(trimmed) as unknown;
-      if (Array.isArray(parsed) && parsed.every((tag) => typeof tag === 'string')) return parsed;
-    } catch {
-      // Fall through to the legacy pipe-separated format for backwards compatibility.
-    }
+  if (!value.startsWith(structuredTagsPrefix)) return value.split('|').filter(Boolean);
+
+  try {
+    const parsed = JSON.parse(value.slice(structuredTagsPrefix.length)) as unknown;
+    if (Array.isArray(parsed) && parsed.every((tag) => typeof tag === 'string')) return parsed;
+  } catch {
+    // The stable user-safe error below intentionally hides parser internals.
   }
-  return value.split('|').filter(Boolean);
+  fail('csv-invalid-tags');
 }
 
 function csvCell(value: string): string {

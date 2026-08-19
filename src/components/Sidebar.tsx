@@ -48,6 +48,7 @@ export function Sidebar({ activeView, projects, activeProject, onView, onProject
               className={activeProject === project ? 'nav-button active' : 'nav-button'}
               type="button"
               onClick={() => onProject(project)}
+              aria-current={activeProject === project ? 'page' : undefined}
             >
               {project}
             </button>

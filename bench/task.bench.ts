@@ -1,4 +1,4 @@
-import { test } from 'vitest';
+import { bench, describe } from 'vitest';
 import { calculateStats, createTask, filterAndSortTasks } from '../src/domain/task';
 import type { Task, TaskFilters } from '../src/domain/types';
 
@@ -27,14 +27,12 @@ const filters: TaskFilters = {
   sort: 'priority-desc'
 };
 
-test('10k task filtering and sorting', async ({ bench }) => {
-  await bench('filterAndSortTasks', () => {
+describe('task domain performance', () => {
+  bench('10k task filtering and sorting', () => {
     filterAndSortTasks(tasks, filters, now);
-  }).run();
-});
+  });
 
-test('10k task statistics', async ({ bench }) => {
-  await bench('calculateStats', () => {
+  bench('10k task statistics', () => {
     calculateStats(tasks, now);
-  }).run();
+  });
 });

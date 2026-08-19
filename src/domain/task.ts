@@ -1,3 +1,4 @@
+import { parseStrictDateTime } from './datetime';
 import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
 import type {
@@ -268,8 +269,8 @@ function normalizeDate(value: string | null | undefined): string | null {
 
 function normalizeDateTime(value: string | null | undefined): string | null {
   if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) fail('task-reminder-invalid');
+  const date = parseStrictDateTime(value);
+  if (!date) fail('task-reminder-invalid');
   return date.toISOString();
 }
 

@@ -15,6 +15,9 @@ const csvHeaders = [
   'recurrence',
   'status'
 ] as const;
+const csvEncodingHeader = 'taskmintEncoding';
+const csvEncodingValue = 'safe-text-v1';
+const exportCsvHeaders = [...csvHeaders, csvEncodingHeader] as const;
 const structuredTagsPrefix = 'json:';
 
 const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
@@ -47,19 +50,20 @@ export function parseBackup(text: string): TaskBackup {
 }
 
 export function tasksToCsv(tasks: Task[]): string {
-  const rows = [csvHeaders.join(',')];
+  const rows = [exportCsvHeaders.join(',')];
   for (const task of tasks) {
     rows.push(
       [
-        task.title,
-        task.notes,
+        encodeSpreadsheetText(task.title),
+        encodeSpreadsheetText(task.notes),
         task.priority,
         task.dueDate ?? '',
         task.reminderAt ?? '',
         encodeCsvTags(task.tags),
-        task.project,
+        encodeSpreadsheetText(task.project),
         task.recurrence,
-        task.status
+        task.status,
+        csvEncodingValue
       ]
         .map(csvCell)
         .join(',')
@@ -106,6 +110,8 @@ export function downloadText(filename: string, content: string, type: string): v
 
 function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task {
   const value = (name: (typeof csvHeaders)[number]) => row[headers.indexOf(name)] ?? '';
+  const encodingIndex = headers.indexOf(csvEncodingHeader);
+  const encoding = encodingIndex >= 0 ? (row[encodingIndex] ?? '') : '';
   const priority = value('priority') as Priority;
   const recurrence = value('recurrence') as Recurrence;
   const status = value('status') as TaskStatus;
@@ -118,13 +124,13 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
     const now = new Date();
     const task = createTask(
       {
-        title: value('title'),
-        notes: value('notes'),
+        title: decodeSpreadsheetText(value('title'), encoding),
+        notes: decodeSpreadsheetText(value('notes'), encoding),
         priority,
         dueDate: value('dueDate') || null,
         reminderAt: value('reminderAt') || null,
         tags: decodeCsvTags(value('tags')),
-        project: value('project'),
+        project: decodeSpreadsheetText(value('project'), encoding),
         recurrence
       },
       now,
@@ -159,6 +165,17 @@ function decodeCsvTags(value: string): string[] {
     // The stable user-safe error below intentionally hides parser internals.
   }
   fail('csv-invalid-tags');
+}
+
+function encodeSpreadsheetText(value: string): string {
+  if (value.startsWith("'")) return `'${value}`;
+  return /^[=+\-@]/.test(value) ? `'${value}` : value;
+}
+
+function decodeSpreadsheetText(value: string, encoding: string): string {
+  if (encoding !== csvEncodingValue) return value;
+  if (value.startsWith("''")) return value.slice(1);
+  return /^'[=+\-@]/.test(value) ? value.slice(1) : value;
 }
 
 function csvCell(value: string): string {

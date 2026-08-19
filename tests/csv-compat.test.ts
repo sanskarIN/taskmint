@@ -40,4 +40,14 @@ describe('CSV encoding compatibility', () => {
 
     expect(() => csvToTasks(csv)).toThrow(/row 3.*invalid priority/i);
   });
+
+  it('assigns contiguous caller-provided orders across skipped blank records', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      ',,,,,,,,\r\n' +
+      'First import,,medium,,,,,none,active\r\n' +
+      'Second import,,medium,,,,,none,active';
+
+    expect(csvToTasks(csv, 5000).map((task) => task.order)).toEqual([5000, 5001]);
+  });
 });

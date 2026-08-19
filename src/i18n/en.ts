@@ -26,6 +26,7 @@ export const strings = {
   dueDate: 'Due date',
   reminder: 'Reminder',
   reminderNotificationTitle: 'TaskMint reminder',
+  reminderSummaryBody: (count: number) => `${count} more due reminders are waiting in TaskMint.`,
   project: 'Project',
   projectPlaceholder: 'e.g. School',
   tags: 'Tags',

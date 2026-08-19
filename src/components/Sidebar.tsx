@@ -37,24 +37,24 @@ export function Sidebar({ activeView, projects, activeProject, onView, onProject
             </button>
           ))}
         </div>
-      </nav>
-      <div>
-        <p className="nav-heading">{strings.projects}</p>
-        <div className="nav-list">
-          {projects.length === 0 && <span className="muted small">{strings.noProjectsYet}</span>}
-          {projects.map((project) => (
-            <button
-              key={project}
-              className={activeProject === project ? 'nav-button active' : 'nav-button'}
-              type="button"
-              onClick={() => onProject(project)}
-              aria-current={activeProject === project ? 'page' : undefined}
-            >
-              {project}
-            </button>
-          ))}
+        <div>
+          <p className="nav-heading">{strings.projects}</p>
+          <div className="nav-list">
+            {projects.length === 0 && <span className="muted small">{strings.noProjectsYet}</span>}
+            {projects.map((project) => (
+              <button
+                key={project}
+                className={activeProject === project ? 'nav-button active' : 'nav-button'}
+                type="button"
+                onClick={() => onProject(project)}
+                aria-current={activeProject === project ? 'page' : undefined}
+              >
+                {project}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </nav>
     </aside>
   );
 }

@@ -1,19 +1,19 @@
 # TaskMint Operations, CI, and Release Handbook
 
-This guide documents how TaskMint is built, checked, verified, and released. It is intended for maintainers and contributors operating the repository rather than ordinary end users.
+This guide documents how TaskMint is built, checked, verified, and released. It is for maintainers/contributors operating the repository rather than ordinary end users.
 
 ## 1. Operating principles
 
-TaskMint's release process is intentionally fail-closed.
+TaskMint's release process is fail-closed.
 
-A change is not considered verified merely because:
+A change is not verified merely because:
 
-- it compiles by inspection;
+- it looks correct by inspection;
 - a pull request is mergeable;
-- an older workflow run passed;
+- an older workflow passed;
 - a workflow is queued/pending;
 - a dependency install was skipped;
-- a release artifact can be manually assembled.
+- an artifact can be manually assembled.
 
 Verification evidence must belong to the exact source tree being promoted.
 
@@ -22,30 +22,21 @@ Never fabricate:
 - `package-lock.json`;
 - test results;
 - screenshots;
-- release checksums;
+- checksums;
 - workflow conclusions.
 
 ## 2. Runtime/tool requirements
 
-Repository engine requirement:
+- Node.js `>=22.12`
+- npm
+- Git
+- Chromium/Playwright dependencies for browser E2E
 
-```text
-Node.js >= 22.12
-```
-
-Primary package manager:
-
-```text
-npm
-```
-
-The application itself requires no backend service, database server, account, API key, or runtime secret.
-
-For Chromium E2E, Playwright's browser/runtime dependencies must also be installed.
+TaskMint itself currently needs no backend, database server, account, API key, or runtime secret.
 
 ## 3. Package scripts
 
-The canonical script list lives in `package.json`.
+The canonical list is `package.json`.
 
 ### Development
 
@@ -53,17 +44,15 @@ The canonical script list lives in `package.json`.
 npm run dev
 ```
 
-Starts the Vite development server.
-
 ### Production build
 
 ```bash
 npm run build
 ```
 
-Equivalent logical stages:
+Logical stages:
 
-1. TypeScript project build (`tsc -b`)
+1. `tsc -b`
 2. Vite production build
 
 ### Production preview
@@ -72,15 +61,11 @@ Equivalent logical stages:
 npm run preview
 ```
 
-Serves the built output for local browser/PWA verification.
-
 ### Type checking
 
 ```bash
 npm run typecheck
 ```
-
-Runs TypeScript project checks without pretty terminal formatting.
 
 ### Lint
 
@@ -88,7 +73,7 @@ Runs TypeScript project checks without pretty terminal formatting.
 npm run lint
 ```
 
-Runs ESLint across the repository with zero warnings allowed.
+Type-aware ESLint runs with zero warnings allowed.
 
 ### Formatting write
 
@@ -96,35 +81,49 @@ Runs ESLint across the repository with zero warnings allowed.
 npm run format
 ```
 
-Runs Prettier write mode.
-
 ### Deterministic formatting invariants
 
 ```bash
 npm run format:check
 ```
 
-Runs `scripts/check-format.mjs`.
-
-It checks tracked text paths for:
+Runs `scripts/check-format.mjs` and checks configured repository text for:
 
 - LF-only line endings;
-- final newline presence;
+- final newline;
 - trailing whitespace.
 
-It walks `src`, `tests`, `e2e`, `bench`, `docs`, `.github`, and `scripts`, plus the explicit root text/config file list.
-
-### Documentation link verification
+### Documentation links
 
 ```bash
 npm run docs:check
 ```
 
-Runs `scripts/check-doc-links.mjs`.
+Runs `scripts/check-doc-links.mjs` across root docs plus Markdown under `docs/` and `.github/`.
 
-It scans root Markdown plus Markdown under `docs/` and `.github/`, then validates repository-relative links.
+It validates repository-relative targets and intentionally does not fetch external URLs.
 
-It intentionally does not fetch external URLs. External-link review remains a release/manual-review responsibility.
+### Documentation inventory
+
+```bash
+npm run docs:inventory
+```
+
+Runs `scripts/check-doc-inventory.mjs`.
+
+It obtains the current tracked paths from:
+
+```bash
+git ls-files
+```
+
+and enforces:
+
+- every tracked file is present in `docs/file-index.md`;
+- the detailed `docs/repository-reference.md` retains required subsystem sections;
+- every tracked `tests/`, `e2e/`, `bench/`, and `src/test/setup.ts` path is present in `docs/test-matrix.md`.
+
+This converts “document every file” from a one-time manual promise into a deterministic repository gate.
 
 ### Secret-pattern guard
 
@@ -132,29 +131,15 @@ It intentionally does not fetch external URLs. External-link review remains a re
 npm run secrets:check
 ```
 
-Runs `scripts/check-secrets.mjs`.
+Runs `scripts/check-secrets.mjs` against configured repository text for common credential/private-key shapes.
 
-The guard scans repository text for common credential/private-key shapes such as:
+It is defense in depth, not a substitute for provider rotation, GitHub secret scanning, or human review.
 
-- private key headers;
-- GitHub tokens;
-- AWS access keys;
-- Google API keys;
-- Slack tokens;
-- Stripe live keys;
-- OpenAI-style secret keys.
-
-This is defense in depth, not a substitute for GitHub secret scanning, credential rotation, or human review.
-
-Never place a real secret in the repository to test this script.
-
-### Unit/component/property tests
+### Unit/component/property/config tests
 
 ```bash
 npm test
 ```
-
-Runs Vitest once.
 
 Watch mode:
 
@@ -168,19 +153,12 @@ npm run test:watch
 npm run bench
 ```
 
-Runs the Vitest benchmark file separately from correctness gates. Benchmarks are diagnostic and are not hard pass/fail timing thresholds.
+Non-gating diagnostic benchmark.
 
 ### Playwright E2E
 
-Install Chromium and system dependencies:
-
 ```bash
 npm run test:e2e:install
-```
-
-Run E2E:
-
-```bash
 npm run test:e2e
 ```
 
@@ -194,13 +172,14 @@ Current sequence:
 
 1. `format:check`
 2. `docs:check`
-3. `secrets:check`
-4. `lint`
-5. `typecheck`
-6. `test`
-7. `build`
+3. `docs:inventory`
+4. `secrets:check`
+5. `lint`
+6. `typecheck`
+7. `test`
+8. `build`
 
-Dependency audit and browser E2E are intentionally separate commands/workflow steps rather than hidden inside this combined script.
+Dependency audit and E2E remain explicit additional gates.
 
 ### Release readiness guard
 
@@ -208,259 +187,204 @@ Dependency audit and browser E2E are intentionally separate commands/workflow st
 npm run release:check -- v0.1.0
 ```
 
-This runs `scripts/check-release.mjs` and requires:
+Requires:
 
-- a non-empty `package.json` version;
-- exact tag match `v${package.version}`;
-- a committed `package-lock.json`.
+- non-empty package version;
+- exact `v${package.version}` tag match;
+- committed `package-lock.json`.
 
-The guard is intentionally expected to fail before the real npm-generated lockfile exists.
+It intentionally fails before a real lockfile exists.
 
 ## 4. Dependency policy
 
-Top-level package versions are pinned exactly in `package.json`.
+Top-level dependency versions are pinned exactly.
 
-Current release policy requires a real npm-generated `package-lock.json` before tagging.
+Before the first real lockfile, CI/E2E may use:
 
-Before that lockfile exists, CI/E2E can use a development fallback `npm install --ignore-scripts`. Once the lockfile exists, those workflows automatically switch to:
+```bash
+npm install --ignore-scripts
+```
+
+Once `package-lock.json` is committed, those workflows switch to:
 
 ```bash
 npm ci --ignore-scripts
 ```
 
-The release workflow has **no fallback** and always uses `npm ci --ignore-scripts` after the release guard.
+Tagged Release never has an install fallback: it requires the release guard and `npm ci --ignore-scripts`.
 
-This distinction allows pre-release engineering to continue without pretending an ungenerated lockfile is reproducible release evidence.
+## 5. Why automated install scripts are disabled
 
-## 5. Why install scripts are disabled
+`--ignore-scripts` reduces exposure to package lifecycle scripts during CI/release installation.
 
-Automated dependency installation uses `--ignore-scripts` to reduce exposure to package lifecycle scripts during CI/release installation.
-
-If a future dependency genuinely requires install scripts, changing this policy should be deliberate, documented, security-reviewed, and tested.
+If a future dependency genuinely requires install scripts, changing this should be deliberate, security-reviewed, documented, and tested.
 
 ## 6. GitHub Actions overview
 
-TaskMint currently defines four workflows:
+Current workflows:
 
-- `CI`
-- `E2E`
-- `CodeQL`
-- `Release`
+- CI
+- E2E
+- CodeQL
+- Release
 
-Core checkout/setup actions are on current supported majors used by the repository. Dependabot monitors package and/or GitHub Actions dependencies according to `.github/dependabot.yml`.
+See `.github/workflows/` and `github.md`.
 
 ## 7. CI workflow
 
-File:
-
-- `.github/workflows/ci.yml`
+File: `.github/workflows/ci.yml`
 
 Triggers:
 
-- push to `main`
-- every pull request
+- push to `main`;
+- pull request.
 
-Permissions:
+Permission:
 
-- `contents: read`
+- `contents: read`.
 
 Concurrency:
 
-- group by workflow + ref
-- `cancel-in-progress: true`
+- workflow/ref scoped;
+- cancel superseded in-progress run.
 
-This means a newer run on the same ref supersedes an older in-progress run.
+Runner/timeout:
 
-### CI quality job
+- `ubuntu-latest`;
+- 15 minutes.
 
-Runner:
+Current quality steps:
 
-```text
-ubuntu-latest
-```
+1. checkout;
+2. setup Node 22;
+3. install dependencies;
+4. format invariants;
+5. documentation links;
+6. documentation inventory;
+7. secret patterns;
+8. lint;
+9. typecheck;
+10. unit/component/property/config tests;
+11. production build;
+12. high-severity npm audit.
 
-Timeout:
-
-```text
-15 minutes
-```
-
-Steps:
-
-1. checkout
-2. setup Node 22
-3. install dependencies
-4. format invariant check
-5. documentation-link check
-6. secret-pattern check
-7. lint
-8. typecheck
-9. unit/component/property tests
-10. production build
-11. `npm audit --audit-level=high`
-
-A CI run is successful only when the job concludes successfully for the exact commit being verified.
+A run counts only if it concludes successfully for the exact commit being verified.
 
 ## 8. E2E workflow
 
-File:
-
-- `.github/workflows/e2e.yml`
+File: `.github/workflows/e2e.yml`
 
 Triggers:
 
-- push to `main`
-- pull request
-- manual `workflow_dispatch`
+- push to `main`;
+- pull request;
+- manual dispatch.
 
-Permissions:
+Permission:
 
-- `contents: read`
+- `contents: read`.
 
-Concurrency:
+Runner/timeout:
 
-- ref-scoped cancellation enabled
+- `ubuntu-latest`;
+- 20 minutes.
 
-Job:
+Sequence:
 
-```text
-chromium
-```
+1. checkout;
+2. setup Node 22;
+3. install dependencies;
+4. install Chromium with system dependencies;
+5. run `npm run test:e2e`;
+6. upload `playwright-report/` for seven days on failure.
 
-Runner:
-
-```text
-ubuntu-latest
-```
-
-Timeout:
-
-```text
-20 minutes
-```
-
-Steps:
-
-1. checkout
-2. setup Node 22
-3. install dependencies
-4. install Playwright Chromium with OS dependencies
-5. run `npm run test:e2e`
-6. upload `playwright-report/` for seven days if the job fails
-
-Failure artifacts should be inspected before changing code. Do not guess at an E2E failure if the real report/log is available.
+Inspect real failure logs/reports before changing code.
 
 ## 9. CodeQL workflow
 
-File:
-
-- `.github/workflows/codeql.yml`
+File: `.github/workflows/codeql.yml`
 
 Triggers:
 
-- push to `main`
-- pull request
-- weekly schedule: Monday at 04:24 UTC
+- push to `main`;
+- pull request;
+- Monday 04:24 UTC schedule.
 
 Permissions:
 
-- `contents: read`
-- `security-events: write`
+- `contents: read`;
+- `security-events: write`.
 
 Language:
 
-```text
-javascript-typescript
-```
+- JavaScript/TypeScript.
 
-Concurrency cancellation is enabled per workflow/ref.
-
-The workflow initializes and runs GitHub CodeQL analysis using `github/codeql-action` v4.
+Uses CodeQL v4 and ref-scoped cancellation.
 
 ## 10. Release workflow
 
-File:
-
-- `.github/workflows/release.yml`
+File: `.github/workflows/release.yml`
 
 Trigger:
 
 ```text
-push tag matching v*.*.*
+v*.*.* tag push
 ```
 
 Permission:
 
-```text
-contents: write
-```
+- `contents: write`.
 
-Runner:
+Runner/timeout:
 
-```text
-ubuntu-latest
-```
+- `ubuntu-latest`;
+- 30 minutes.
 
-Timeout:
+Sequence:
 
-```text
-30 minutes
-```
+1. checkout;
+2. setup Node 22;
+3. verify tag/lockfile;
+4. locked `npm ci --ignore-scripts`;
+5. `npm run check` (including documentation inventory);
+6. high-severity audit;
+7. install Chromium;
+8. E2E;
+9. package `dist/`;
+10. SHA-256 checksum;
+11. GitHub Release with generated notes;
+12. attach archive + checksum.
 
-### Release sequence
-
-1. checkout
-2. setup Node 22
-3. run release tag/lockfile guard
-4. install with locked `npm ci --ignore-scripts`
-5. run `npm run check`
-6. run high-severity npm audit
-7. install Chromium
-8. run Playwright E2E
-9. package `dist/` into a `.tar.gz`
-10. generate SHA-256 checksum
-11. create GitHub Release with generated release notes
-12. attach archive + checksum
-
-Release archive name follows:
+Artifacts:
 
 ```text
 taskmint-web-<tag>.tar.gz
-```
-
-Checksum file:
-
-```text
 taskmint-web-<tag>.tar.gz.sha256
 ```
 
 ## 11. Release evidence hierarchy
 
-Before tagging, require evidence in this order.
+### Source review
 
-### Source-level review
+Useful but not execution evidence.
 
-Confirms design/code/documentation coherence but is not execution evidence.
+### Exact PR-head hosted verification
 
-### Pull-request exact-head checks
+Require successful:
 
-Require explicit successful:
+- CI;
+- E2E;
+- CodeQL.
 
-- CI
-- E2E
-- CodeQL
+If the PR receives another commit, older results are stale.
 
-All must refer to the current PR head.
+### Exact `main` after merge
 
-If a new commit is pushed, every older run becomes stale for release purposes.
+Verify the resulting final tree rather than assuming merge SHA equals source PR SHA.
 
-### Exact-main checks after merge
+### Locked release gates
 
-After merge, verify the actual resulting `main` tree. Do not assume the PR source SHA equals the resulting main/merge SHA.
-
-### Locked local/hosted release checks
-
-After a real lockfile exists:
+After real lockfile exists:
 
 ```bash
 npm ci --ignore-scripts
@@ -470,213 +394,195 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-### Manual browser verification
+### Manual browser review
 
-Complete the documented checklist in `release.md`.
+Follow `release.md`.
 
 ### Real screenshots
 
-Capture from the verified build using fictional/demo data only.
+Capture from the verified build with fictional/demo data.
 
 ### Tag/release workflow
 
-Only then create the version tag and require the tagged workflow to pass independently.
+Only then tag and require the tagged workflow to pass independently.
 
 ## 12. Workflow status interpretation
 
-Use exact conclusions.
-
-### Acceptable release evidence
+Valid required result:
 
 ```text
 status = completed
 conclusion = success
 ```
 
-for every required workflow/job.
+Not success:
 
-### Not success
+- queued;
+- in progress;
+- waiting;
+- pending;
+- cancelled;
+- unexpectedly skipped;
+- neutral where success is required;
+- missing;
+- success attached to an older SHA.
 
-- queued
-- in_progress
-- waiting
-- pending
-- cancelled
-- skipped when the gate was required
-- neutral when success is required
-- no check returned
-- success for an older SHA
-
-Mergeability is a Git merge-state property, not test evidence.
+Mergeability is not a test conclusion.
 
 ## 13. Concurrency and stale runs
 
-CI, E2E, and CodeQL use cancellation groups to reduce wasted runner capacity.
+CI/E2E/CodeQL cancel superseded work on the same ref where GitHub scheduling permits.
 
-Even if GitHub does not immediately cancel an older run, maintainers must treat it as stale after a newer commit changes the verified tree.
+Regardless of cancellation timing, every older run becomes stale for release evidence after the head changes.
 
-When diagnosing release readiness, always:
+Always verify:
 
-1. fetch the current PR/main SHA;
-2. fetch runs attached to that SHA;
-3. inspect conclusions for those runs only.
+1. current SHA;
+2. runs for that SHA;
+3. conclusions for those runs only.
 
 ## 14. Dependabot
 
-`.github/dependabot.yml` is the repository automation entry point for dependency update proposals.
+`.github/dependabot.yml` proposes dependency/workflow updates.
 
-Dependency PRs must still pass the same quality/security/browser expectations as ordinary changes. Do not merge solely because an update is automated.
+Automation does not remove the need for code review, changelog/API review, security review, and CI/E2E verification.
 
-## 15. Repository formatting guard
+## 15. Formatting guard
 
-`scripts/check-format.mjs` is deliberately dependency-free Node code so basic text hygiene can be checked before npm dependencies are available.
+`scripts/check-format.mjs` is dependency-free Node code and covers configured root/source/test/E2E/bench/docs/GitHub/script text paths.
 
-It covers the root configuration/documentation files plus recursive code/test/docs/workflow/script directories.
+If a new top-level text location is introduced, inspect/update its roots/list.
 
-When adding a new text-bearing top-level file or a new directory outside its existing roots, update the guard if that file should be part of deterministic repository hygiene.
+## 16. Documentation link guard
 
-## 16. Documentation-link guard
-
-`scripts/check-doc-links.mjs` walks:
-
-- `docs/`
-- `.github/`
-- root documentation files listed in the script
-
-It ignores:
-
-- anchors-only links;
-- external HTTP(S) URLs;
-- mailto/tel/data URLs.
+`scripts/check-doc-links.mjs` validates local Markdown targets.
 
 It rejects:
 
-- malformed percent-encoding;
-- repository-relative links escaping repository root;
-- missing repository-relative targets.
+- invalid percent encoding;
+- repository escapes;
+- missing relative targets.
 
-When adding a new root Markdown document, add it to the script's `rootMarkdown` list if it is not under an already-walked documentation directory.
+External links are deliberately not fetched.
 
-## 17. Secret-pattern guard
+## 17. Documentation inventory guard
 
-`scripts/check-secrets.mjs` recursively covers source, tests, E2E, benchmarks, docs, workflows, scripts, and public text assets plus its explicit root-file list.
+`scripts/check-doc-inventory.mjs` requires a real Git checkout because it uses `git ls-files`.
 
-It emits path + line number + pattern category, but does not intentionally print the matched secret text.
+It is intentionally dependency-free and should run before lint/test/build in CI.
 
-If it ever catches a real secret:
+Maintenance rules:
 
-1. treat the credential as compromised;
-2. rotate/revoke it at the provider;
-3. remove it from repository history as appropriate;
-4. do not merely suppress the pattern and continue using the secret.
+- add/remove/rename tracked path -> update `docs/file-index.md`;
+- test/E2E/benchmark path change -> update `docs/test-matrix.md`;
+- subsystem responsibility change -> update `docs/repository-reference.md`.
 
-## 18. CSP and development-server policy
+Do not suppress a missing path simply to make CI green; either document the file or remove it intentionally.
 
-`index.html` contains the restrictive production Content Security Policy.
+## 18. Secret-pattern guard
 
-`vite.config.ts` contains a plugin applied only in `serve` mode that relaxes two directives for Vite development behavior:
+`scripts/check-secrets.mjs` scans configured source/tests/E2E/bench/docs/GitHub/scripts/public/root text.
 
-- adds `'unsafe-inline'` to `style-src` for dev style injection;
-- adds `ws:` / `wss:` to `connect-src` for HMR.
+It reports path/line/category without intentionally printing the matched secret.
 
-These allowances must not be copied into the committed production CSP just to resolve a development-server issue.
+If it catches a real secret:
 
-`tests/security-config.test.ts` guards this boundary.
+1. revoke/rotate it;
+2. remove it from active configuration;
+3. follow security incident handling;
+4. do not just weaken the pattern.
 
-## 19. PWA operations
+## 19. CSP/development policy
 
-`vite-plugin-pwa` is configured with:
+`index.html` holds production CSP.
+
+`vite.config.ts` serve mode adds only dev inline-style/WebSocket allowances for Vite HMR.
+
+Never move those dev relaxations into the production policy as a workaround.
+
+## 20. PWA operations
+
+Current PWA update mode:
 
 ```text
 registerType = prompt
 ```
 
-not `autoUpdate`.
-
-The generated service worker precaches application assets matching the configured Workbox patterns and uses `/index.html` as navigation fallback.
-
-For realistic PWA verification:
+Use:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Then use browser Application/Storage tooling to inspect:
+to verify real manifest/service-worker/cache/IndexedDB/waiting-worker behavior.
 
-- manifest
-- service worker state
-- precache/runtime cache
-- IndexedDB
-- waiting-worker update behavior
+Dev-server HMR is not production PWA evidence.
 
-Do not use dev-server HMR behavior as proof of production service-worker behavior.
+## 21. Browser data operations
 
-## 20. Browser data operations
+Authoritative task data is IndexedDB `taskmint`.
 
-TaskMint's authoritative user data is in IndexedDB database `taskmint`.
+Operational invariants:
 
-Operationally important rules:
-
-- writes update React state only after persistence success;
-- multi-task writes are transactional;
-- startup reads are validated;
-- malformed startup data fails closed and remains untouched;
-- JSON restore validates before destructive transaction open;
-- delete-all clears both task and settings tables transactionally.
+- persistence before React success state;
+- transactional multi-task writes;
+- validated startup reads;
+- fail-closed malformed startup data;
+- backup preflight before destructive restore;
+- transactional delete-all.
 
 See `data-model.md` and `architecture.md`.
 
-## 21. Release lockfile procedure
+## 22. Lockfile procedure
 
-When network access is available and the dependency graph is ready:
+When network access is available:
 
-1. ensure working tree dependencies in `package.json` are intentional;
-2. run npm in a clean/network-enabled environment to generate `package-lock.json`;
-3. review registry/package/version/integrity changes;
+1. review intended `package.json` graph;
+2. generate lockfile through npm;
+3. review package/registry/integrity changes;
 4. run locked install/check/audit/E2E;
-5. commit the generated lockfile;
-6. let CI/E2E rerun using `npm ci` automatically;
-7. do not edit lockfile content manually to simulate npm output.
+5. commit generated lockfile;
+6. require fresh CI/E2E using `npm ci`;
+7. never hand-edit it to imitate npm output.
 
-## 22. Screenshot procedure
+## 23. Screenshot procedure
 
-`docs/screenshots/README.md` defines the intended release capture set.
+Follow `screenshots/README.md`.
 
-Screenshots must:
+Screenshots must be:
 
-- come from a verified production build;
-- use fictional/demo task content;
-- avoid personal/private browser data;
-- match the actual released UI;
-- not be AI-generated or mocked and presented as release evidence.
+- from a verified production build;
+- real UI;
+- fictional/demo data;
+- free of private browser/user information;
+- aligned with the exact release candidate.
 
-## 23. Incident/debug workflow
+## 24. Failure/incident workflow
 
-For a failing PR/workflow:
+For a failing workflow:
 
 1. identify exact head SHA;
-2. identify failing workflow and job;
-3. inspect the actual log/artifact;
-4. reproduce locally when possible;
-5. fix the proven defect;
-6. add/adjust regression coverage;
-7. update documentation if behavior/operations changed;
-8. push a focused commit;
-9. discard older check results as stale;
+2. identify workflow/job;
+3. inspect actual log/artifact;
+4. reproduce when possible;
+5. fix proven defect;
+6. add regression coverage;
+7. update docs if behavior/process changes;
+8. push focused commit;
+9. mark older results stale;
 10. require fresh exact-head success.
 
-## 24. Documentation maintenance rule
+## 25. Documentation maintenance
 
-Behavioral, architectural, storage, workflow, security, accessibility, setup, or release changes should update the relevant guide in the same pull request.
+Behavioral/architectural/storage/workflow/security/accessibility/setup/release changes should update coupled docs in the same PR.
 
-Use `repository-reference.md` to identify which docs are coupled to each implementation area.
-
-Run:
+Use:
 
 ```bash
 npm run docs:check
+npm run docs:inventory
 npm run format:check
 ```
 
-before considering documentation work complete.
+The compact complete inventory is `file-index.md`; detailed ownership/coupling is `repository-reference.md`.

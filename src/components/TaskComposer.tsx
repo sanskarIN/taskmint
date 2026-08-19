@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent, type Ref } from 'react';
 import { TASK_LIMITS } from '../domain/limits';
 import type { Recurrence, Task, TaskDraft } from '../domain/types';
 import { strings } from '../i18n/en';
+import { userErrorMessage } from '../i18n/errors';
 
 interface Props {
   editingTask?: Task | null;
@@ -64,7 +65,7 @@ export function TaskComposer({
       });
       reset();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : strings.taskSavedError);
+      setError(userErrorMessage(cause, strings.taskSavedError));
     }
   }
 

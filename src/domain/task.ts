@@ -19,7 +19,7 @@ const priorityRank: Record<Task['priority'], number> = {
 };
 
 export function createTask(draft: TaskDraft, now = new Date(), order = Date.now()): Task {
-  if (!Number.isFinite(order)) fail('task-order-invalid');
+  if (!Number.isSafeInteger(order)) fail('task-order-invalid');
   const iso = now.toISOString();
   return {
     id: createId(),

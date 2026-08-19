@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { strings } from '../i18n/en';
 import { logError } from '../utils/logger';
 
 interface Props {
@@ -28,10 +29,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <main className="fatal-state">
           <img src="/taskmint-icon.svg" width="64" height="64" alt="" />
-          <h1>TaskMint hit an unexpected error.</h1>
-          <p>Your locally stored task data has not been intentionally changed.</p>
+          <h1>{strings.fatalTitle}</h1>
+          <p>{strings.fatalBody}</p>
           <button className="primary" type="button" onClick={() => window.location.reload()}>
-            Reload TaskMint
+            {strings.reloadTaskMint}
           </button>
         </main>
       );

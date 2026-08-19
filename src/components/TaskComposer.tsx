@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type Ref } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type Ref } from 'react';
 import { TASK_LIMITS } from '../domain/limits';
 import type { Recurrence, Task, TaskDraft } from '../domain/types';
 import { strings } from '../i18n/en';
@@ -18,6 +18,7 @@ export function TaskComposer({
   onCancelEdit
 }: Props) {
   const formId = useId();
+  const submitLock = useRef(false);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [priority, setPriority] = useState<TaskDraft['priority']>('medium');
@@ -28,6 +29,7 @@ export function TaskComposer({
   const [recurrence, setRecurrence] = useState<Recurrence>('none');
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!editingTask) {
@@ -48,6 +50,10 @@ export function TaskComposer({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitLock.current) return;
+
+    submitLock.current = true;
+    setSubmitting(true);
     setError('');
     try {
       await onSubmit({
@@ -66,6 +72,9 @@ export function TaskComposer({
       reset();
     } catch (cause) {
       setError(userErrorMessage(cause, strings.taskSavedError));
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -83,6 +92,7 @@ export function TaskComposer({
   }
 
   function cancelEdit() {
+    if (submitLock.current) return;
     reset();
     onCancelEdit?.();
   }
@@ -92,6 +102,7 @@ export function TaskComposer({
       className="composer card"
       onSubmit={handleSubmit}
       aria-label={editingTask ? strings.editTask : strings.addTask}
+      aria-busy={submitting}
     >
       <div className="composer-main">
         <label className="sr-only" htmlFor={`${formId}-title`}>
@@ -109,8 +120,9 @@ export function TaskComposer({
           required
           autoComplete="off"
           aria-keyshortcuts="N"
+          disabled={submitting}
         />
-        <button className="primary" type="submit">
+        <button className="primary" type="submit" disabled={submitting}>
           {editingTask ? strings.saveChanges : strings.addTask}
         </button>
       </div>
@@ -124,6 +136,7 @@ export function TaskComposer({
               onChange={(event) => setNotes(event.target.value)}
               maxLength={TASK_LIMITS.notes}
               rows={3}
+              disabled={submitting}
             />
           </label>
           <label>
@@ -131,6 +144,7 @@ export function TaskComposer({
             <select
               value={priority}
               onChange={(event) => setPriority(event.target.value as TaskDraft['priority'])}
+              disabled={submitting}
             >
               <option value="low">{strings.priorityLow}</option>
               <option value="medium">{strings.priorityMedium}</option>
@@ -140,7 +154,12 @@ export function TaskComposer({
           </label>
           <label>
             {strings.dueDate}
-            <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+              disabled={submitting}
+            />
           </label>
           <label>
             {strings.reminder}
@@ -148,6 +167,7 @@ export function TaskComposer({
               type="datetime-local"
               value={reminderAt}
               onChange={(event) => setReminderAt(event.target.value)}
+              disabled={submitting}
             />
           </label>
           <label>
@@ -157,6 +177,7 @@ export function TaskComposer({
               onChange={(event) => setProject(event.target.value)}
               maxLength={TASK_LIMITS.project}
               placeholder={strings.projectPlaceholder}
+              disabled={submitting}
             />
           </label>
           <label>
@@ -166,6 +187,7 @@ export function TaskComposer({
               onChange={(event) => setTags(event.target.value)}
               aria-describedby={`${formId}-tags-help`}
               placeholder={strings.tagsPlaceholder}
+              disabled={submitting}
             />
             <span id={`${formId}-tags-help`} className="field-help">
               {strings.tagsHelp(TASK_LIMITS.tags, TASK_LIMITS.tag)}
@@ -176,6 +198,7 @@ export function TaskComposer({
             <select
               value={recurrence}
               onChange={(event) => setRecurrence(event.target.value as Recurrence)}
+              disabled={submitting}
             >
               <option value="none">{strings.recurrenceNever}</option>
               <option value="daily">{strings.recurrenceDaily}</option>
@@ -184,7 +207,7 @@ export function TaskComposer({
             </select>
           </label>
           {editingTask && (
-            <button type="button" className="ghost" onClick={cancelEdit}>
+            <button type="button" className="ghost" onClick={cancelEdit} disabled={submitting}>
               {strings.cancel}
             </button>
           )}

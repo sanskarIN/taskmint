@@ -37,6 +37,7 @@ export type TaskMintErrorCode =
   | 'csv-invalid-priority'
   | 'csv-invalid-recurrence'
   | 'csv-invalid-status'
+  | 'csv-invalid-tags'
   | 'csv-row-invalid'
   | 'csv-unterminated-quote'
   | 'import-file-too-large';
@@ -144,6 +145,8 @@ export function errorMessage(code: TaskMintErrorCode, details: TaskMintErrorDeta
       return `CSV row ${details.row ?? '?'} has an invalid recurrence.`;
     case 'csv-invalid-status':
       return `CSV row ${details.row ?? '?'} has an invalid status.`;
+    case 'csv-invalid-tags':
+      return 'CSV contains an invalid structured tag field.';
     case 'csv-row-invalid':
       return `CSV row ${details.row ?? '?'}: ${details.causeMessage ?? 'Invalid task data.'}`;
     case 'csv-unterminated-quote':

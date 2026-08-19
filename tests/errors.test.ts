@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TaskMintError, type TaskMintErrorCode } from '../src/domain/errors';
 import { createTask } from '../src/domain/task';
+import { userErrorMessage } from '../src/i18n/errors';
 import { csvToTasks, parseBackup } from '../src/utils/export';
 
 function expectTaskMintError(
@@ -51,5 +52,13 @@ describe('typed user-safe errors', () => {
     const error = new TaskMintError('task-title-too-long', { max: 240 });
     expect(Object.isFrozen(error.details)).toBe(true);
     expect(error.details).toEqual({ max: 240 });
+  });
+
+  it('surfaces known validation errors but hides unknown infrastructure messages', () => {
+    const known = new TaskMintError('backup-json-invalid');
+    expect(userErrorMessage(known, 'Could not import backup.')).toBe('Backup is not valid JSON.');
+    expect(
+      userErrorMessage(new Error('QuotaExceededError: internal database path'), 'Could not import backup.')
+    ).toBe('Could not import backup.');
   });
 });

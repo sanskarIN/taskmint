@@ -71,6 +71,7 @@ The project follows Semantic Versioning for tagged releases.
 - Ensure the exclusive mutation gate releases even when entering the busy UI state throws, preserving fail-safe retryability.
 - Serialize onboarding completion, Settings/data actions, and PWA update activation while their persistence/update operations are pending.
 - Guard Settings close/Escape/backdrop dismissal with the synchronous action lock so even same-tick input cannot dismiss a pending operation.
+- Clear selected JSON/CSV import input values before awaiting asynchronous import work so choosing the same file again never depends on the previous promise settling.
 - Reset reminder-notification suppression only after a changed reminder is successfully persisted, preventing a failed edit from re-notifying the unchanged old reminder.
 - Reset the task composer after an edit so stale edited values cannot become an accidental new task.
 - Use the same deterministic manual-order comparator for list rendering, keyboard moves, and drag reordering.

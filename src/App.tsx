@@ -13,6 +13,7 @@ import {
   createTask,
   filterAndSortTasks,
   formatLocalDate,
+  reorderVisibleTasks,
   reopenTask,
   restoreTask,
   updateTask
@@ -216,23 +217,12 @@ export default function App() {
     ) {
       return;
     }
-    const active = tasks.filter((task) => task.status === 'active').sort((a, b) => a.order - b.order);
-    const sourceIndex = active.findIndex((task) => task.id === source.id);
-    const targetIndex = active.findIndex((task) => task.id === target.id);
-    if (sourceIndex < 0 || targetIndex < 0) return;
-    const reordered = [...active];
-    const [removed] = reordered.splice(sourceIndex, 1);
-    if (!removed) return;
-    reordered.splice(targetIndex, 0, removed);
-    const now = new Date().toISOString();
-    const changed = reordered.map((task, index) => ({
-      ...task,
-      order: index * 1000,
-      updatedAt: now
-    }));
+    const activeVisibleTasks = visibleTasks.filter((task) => task.status === 'active');
+    const changed = reorderVisibleTasks(activeVisibleTasks, source.id, target.id);
+    if (!changed.length) return;
     await repository.putTasks(changed);
-    const map = new Map(changed.map((task) => [task.id, task]));
-    setTasks((current) => current.map((task) => map.get(task.id) ?? task));
+    const changedById = new Map(changed.map((task) => [task.id, task]));
+    setTasks((current) => current.map((task) => changedById.get(task.id) ?? task));
   }
 
   async function changeSettings(next: AppSettings) {

@@ -1,5 +1,6 @@
-import { db, type TaskMintDatabase } from './db';
+import { validateSettings, validateTask } from '../domain/validation';
 import type { AppSettings, Task, TaskBackup } from '../domain/types';
+import { db, type TaskMintDatabase } from './db';
 
 export const defaultSettings: AppSettings = {
   key: 'app',
@@ -13,7 +14,7 @@ export class TaskRepository {
   constructor(private readonly database: TaskMintDatabase = db) {}
 
   async listTasks(): Promise<Task[]> {
-    return this.database.tasks.toArray();
+    return (await this.database.tasks.toArray()).map(validateTask);
   }
 
   async putTask(task: Task): Promise<void> {
@@ -39,7 +40,8 @@ export class TaskRepository {
   }
 
   async getSettings(): Promise<AppSettings> {
-    return (await this.database.settings.get('app')) ?? defaultSettings;
+    const settings = await this.database.settings.get('app');
+    return settings === undefined ? defaultSettings : validateSettings(settings);
   }
 
   async saveSettings(settings: AppSettings): Promise<void> {

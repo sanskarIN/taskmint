@@ -17,14 +17,14 @@
 - Current `main` base: `4e4850eab204deeb95e4db2bca24f084aaae0d5e` — `docs: update complete RC6 work handoff`.
 - Current hardening branch: `continuation/v0.1-rc7-hardening`.
 - RC7 PR: **#17** — `fix: harden TaskMint v0.1 RC7 persistence and interaction safety`.
-- Branch state immediately before this final handoff commit: **58 meaningful commits ahead of `main`, 0 behind**.
+- Branch state immediately before this final handoff commit: **62 meaningful commits ahead of `main`, 0 behind**.
 - PR #16: **closed as superseded**, not merged.
 
-The prior complete RC6 handoff is preserved verbatim at:
+The complete previous RC6 handoff remains preserved verbatim at:
 
 - `docs/handoffs/what_changed-rc6-2026-08-19.md`
 
-This root file is now the authoritative RC7 continuation checkpoint.
+This root file is the authoritative RC7 continuation checkpoint.
 
 ---
 
@@ -35,70 +35,56 @@ Only explicit successful hosted checks attached to the **exact current PR #17 he
 Never treat these as success:
 
 - mergeable PR state
-- queued workflows
-- pending workflows
+- queued/pending workflows
 - cancelled workflows
 - missing checks
-- runs for an older PR head
-- RC6 workflow results
-- source/static review without dependency-backed execution
+- checks from an older PR head
+- RC6 checks
+- static source review without dependency-backed execution
 
-PR #17 moved through multiple heads while real defects were found and fixed. Every older run becomes stale as soon as the branch head changes.
+PR #17 has moved through multiple exact heads as real defects were found. Every older run is stale after a new commit.
 
-After this final handoff commit, fetch PR #17 again and inspect CI, E2E, and CodeQL only for the resulting exact SHA.
+After this handoff commit, fetch PR #17 again, obtain its exact resulting head SHA, and inspect CI, E2E, and CodeQL only for that SHA.
 
-Do not merge until all required exact-head hosted checks explicitly succeed.
+Do **not** merge until all required exact-head hosted checks explicitly succeed.
 
-After a verified merge, verify the resulting exact `main` SHA again before release because a merge SHA may differ from the PR source head.
+After a verified merge, verify the resulting exact `main` SHA again before release because the merge SHA may differ from the PR source SHA.
 
 ---
 
 # RC7 hardening completed
 
-## 1. TaskComposer serialization
+## 1. Local and App-wide task mutation serialization
 
-`src/components/TaskComposer.tsx` now prevents duplicate create/update submissions while persistence is pending.
+Task persistence now has two complementary protection layers.
 
-Implemented:
+### TaskComposer
 
 - synchronous local submit lock
-- visible submitting state
-- `aria-busy`
-- disabled task fields/buttons/cancel while pending
-- external App-wide `disabled` support
-- retry-safe lock cleanup
+- submitting state and `aria-busy`
+- form fields/cancel disabled while saving
+- external App-wide disabled state
+- duplicate immediate submits suppressed
+- edit values reset after successful edit
+- retry-safe cleanup after failure
 
-Tests cover immediate duplicate submits, external locking, and edit reset behavior.
+### TaskItem
 
-Key commits:
-
-- `edb097e7a29f03866fa54765ea7d869a4d701dae` — `fix: serialize task composer submissions`
-- `5599bebba057a0582322049fa734649aa91b2605` — `test: cover duplicate composer submission lock`
-
-## 2. Task-row serialization
-
-`src/components/TaskItem.tsx` now serializes each row's asynchronous actions:
+Per-row serialization covers:
 
 - complete/reopen
 - archive/restore
 - delete
-- move up/down
+- keyboard reorder
 - drag/drop reorder
 
-Rows expose local busy state and also honor the App-wide task lock. Edit/drag/mutation controls are disabled while blocked.
+Rows expose busy/disabled semantics and cannot create duplicate same-row mutations while persistence is pending.
 
-Key commits:
+### App-wide exclusive gate
 
-- `76b17f453b8a2a9911d79be804644a4fe3f1c15d` — `fix: serialize task row mutations`
-- `e057f1b42db128738c3af272445a55507f14decc` — `test: cover task row mutation lock`
+A reusable gate in `src/utils/mutation.ts` prevents **different task rows or the composer** from racing writes from the same stale `tasks` snapshot.
 
-## 3. App-wide exclusive task mutation gate
-
-Per-row locks do not stop two different cards from racing writes from the same stale `tasks` snapshot. RC7 therefore adds a reusable gate in:
-
-- `src/utils/mutation.ts`
-
-One synchronous App-owned lock now covers:
+The App-wide gate covers:
 
 - create
 - edit
@@ -113,241 +99,211 @@ One synchronous App-owned lock now covers:
 
 While pending:
 
-- TaskComposer is disabled
-- all rendered TaskItems are disabled
-- the task list exposes busy state
+- composer is disabled
+- all rendered rows are disabled
+- list exposes busy state
 - Settings cannot be opened
 - global task/search shortcuts are blocked
-- Undo cannot start a competing task write
+- Undo cannot start a competing write
 
-The utility is regression-tested for:
+Tests cover competing calls, safe busy errors, action-failure cleanup, busy-state callback failure cleanup, and a full App regression involving two different task cards.
 
-- competing calls
-- safe busy-error behavior
-- action failure cleanup
-- cleanup even if entering the busy UI state throws
+## 2. Collision-free recurring occurrence ordering
 
-`tests/AppMutation.test.tsx` additionally verifies two **different task cards** cannot write concurrently and that the second becomes usable after the first persistence call completes.
+Recurring next occurrences no longer depend on a clock-millisecond manual order.
 
-## 4. Collision-free recurring task order allocation
-
-Recurring next occurrences previously defaulted to a clock-millisecond manual order that could collide with an existing order slot.
-
-`completeTask(...)` / `makeNextOccurrence(...)` now accept an explicit next order, and the App supplies:
+`completeTask(...)` / `makeNextOccurrence(...)` accept an explicit next order, and the App passes:
 
 - `nextTaskOrder(tasks)`
 
-Tests verify explicit order usage and unsafe-order rejection.
+This places the next occurrence after the current maximum order and avoids valid task-order collisions.
 
-## 5. Repository write-boundary validation
+Tests cover explicit order use and unsafe-order rejection.
 
-`src/storage/repository.ts` now validates records before persistence:
+## 3. Repository write-boundary validation
+
+`src/storage/repository.ts` now validates before persistence:
 
 - `putTask` validates one task
-- `putTasks` validates the full batch before transaction open
-- `replaceAllTasks` validates the full replacement before clear/write
+- `putTasks` validates the complete batch before transaction open
+- `replaceAllTasks` validates the complete replacement before clear/write
 - `saveSettings` validates settings
 
-Malformed runtime values cannot silently enter IndexedDB and fail only on a later read.
+Malformed runtime values therefore fail before entering IndexedDB.
 
-Key commits:
+## 4. Backup restore preflight
 
-- `a0660603794233c83b0d337e1ec4bc65df9aa228` — `fix: validate records before local persistence`
-- `8c4750aff8dbc6266fa28df44294a338a86c9b37` — `test: cover repository write validation`
+`restoreBackup(...)` validates and normalizes the complete backup before opening the destructive Dexie transaction.
 
-## 6. Non-destructive backup restore preflight
-
-`restoreBackup(...)` runs complete `validateBackup(...)` validation/normalization before opening the destructive Dexie transaction.
-
-Malformed backup objects therefore fail before:
+Malformed backup objects fail before:
 
 - transaction open
 - task clear
 - settings clear
 
-The audit rechecked duplicate-order restore behavior: `validateBackup(...)` already normalizes duplicate order slots before returning the backup, so no redundant rewrite was added.
+The audit also confirmed that existing backup validation already normalizes duplicate manual-order slots before returning the backup, so no redundant churn was added.
 
-Key commits:
+## 5. Duplicate task IDs rejected before bulk persistence
 
-- `a0760bd2610e10ebcacd23196c722bf6d1c1ef67` — `fix: preflight backup restores before clearing data`
-- `1e1533aa64b06345ad4140ad35a4ac838a55e279` — `test: verify restore preflight is non-destructive`
+Bulk task arrays now reject duplicate task IDs before a write transaction begins.
 
-## 7. Duplicate task-ID rejection before bulk writes
-
-Bulk task writes now reject duplicate task IDs before transaction open instead of depending on last-write-wins storage behavior.
-
-Stable typed error added:
+Stable typed error:
 
 - `task-batch-duplicate-id`
 
-Its code/message/details contract is directly regression-tested.
+Tests cover repository behavior and the typed code/message/details contract.
 
-Key commits:
+## 6. CSV diagnostics, ordering, and limits
 
-- `1605716279fc27e9fe2e7f1c6db93fb3e5fcfc23` — `refactor: add duplicate task batch error`
-- `5970f334d9cea0653002af3ac11059a1578e0beb` — `fix: reject duplicate ids in task batches`
-- `58adbdcf6bcc41e078e2cf34b8eaa438bcc322e8` — `test: reject duplicate ids before bulk persistence`
-- `67d4ff739869d3b69a0238b965b3e4848c94fb94` — `test: cover duplicate task batch error contract`
+### Original source row numbers are preserved
 
-## 8. CSV source-record diagnostics
+Blank logical records are skipped, but source record numbers are assigned first. An invalid row after a blank row is therefore reported against the true original row.
 
-Blank logical CSV records are skipped, but their physical/logical positions must still count when an error reports a row number.
+### CSV merges are rebased after existing task orders
 
-The CSV pipeline now assigns the source record number before blank-row filtering.
+`csvToTasks(...)` supports a caller-provided starting order.
 
-Regression coverage verifies an invalid row 3 remains reported as row 3 when row 2 is blank.
-
-Commits:
-
-- `5049a368c35a22c21d2a1e008cdcb77c0c53fec3` — `fix: preserve CSV record numbers after blank rows`
-- `149d1fca7cd7477e58c43700411ccb6a4ab10112` — `test: preserve CSV error row after blanks`
-
-## 9. CSV merge order rebasing
-
-CSV-created tasks now support a caller-provided starting order.
-
-The App imports CSV using:
+The App now imports with:
 
 - `csvToTasks(csvText, nextTaskOrder(tasks))`
 
-Valid imported rows receive contiguous manual-order slots strictly after the existing task maximum, including when blank records are skipped.
+Valid imported tasks receive contiguous manual-order values strictly after the existing maximum, including when blank records occur between data records.
 
-Commits:
+### Blank records do not consume the task-count quota
 
-- `99f1bcc8ec56f3a7734aaf0f665d92ecdaa15463` — `feat: support collision-free CSV order rebasing`
-- `fb7d728a67e5bd7ef002415b5ea52579ca3c6e35` — `test: cover rebased CSV import ordering`
-- `26b0709d1a343792084dda7fe1637eeac9b4eae9` — `fix: rebase CSV imports after existing task orders`
+The 100,000-task count limit now applies to actual nonblank data records rather than every parsed CSV line/record.
 
-## 10. Blank CSV rows no longer consume the task-count quota
+The independent 25 MB file-size guard remains in force, so blank-record input is still bounded.
 
-A final parser-boundary audit found that the 100,000-task limit was previously checked against every parsed CSV record before blank records were removed. A file with many blank records could therefore be rejected as having too many tasks even though those records create no tasks.
+Regression coverage includes more blank records than the task-count limit and verifies that they import as zero tasks rather than triggering `csv-too-many-tasks`.
 
-The parser now:
+Recent commits in this area include:
 
-1. parses within the existing 25 MB file-size cap
-2. validates the header
-3. assigns original record numbers
-4. filters completely blank data records
-5. applies `TASK_LIMITS.backupTasks` to the remaining actual task records
-6. creates tasks
+- `5049a368c35a22c21d2a1e008cdcb77c0c53fec3` — preserve source row numbers
+- `149d1fca7cd7477e58c43700411ccb6a4ab10112` — row-number regression
+- `99f1bcc8ec56f3a7734aaf0f665d92ecdaa15463` — collision-free CSV order rebasing
+- `fb7d728a67e5bd7ef002415b5ea52579ca3c6e35` — order-rebase regression
+- `26b0709d1a343792084dda7fe1637eeac9b4eae9` — App uses existing-task order base
+- `9b6811a6323dbd2df870b48d54ae9b8b50dcf08d` — blank records excluded from task-count limit
+- `fa400342ffdbb854a562c10aac6a18369d1a8edc` — blank-record limit regression
 
-The independent file-size limit remains unchanged, so blank-record input is still bounded.
+## 7. Settings/data action serialization
 
-Regression coverage generates more blank logical records than the task-count limit and verifies they import as zero tasks rather than triggering `csv-too-many-tasks`.
+Settings uses one synchronous action lock for:
 
-Commits:
+- theme
+- reduced motion
+- notification enablement
+- JSON export
+- CSV export
+- JSON import
+- CSV import
+- delete-all local data
 
-- `9b6811a6323dbd2df870b48d54ae9b8b50dcf08d` — `fix: exclude blank CSV records from task limits`
-- `fa400342ffdbb854a562c10aac6a18369d1a8edc` — `test: exclude blank CSV rows from task limit`
-- `2407d45e2e88941d86b38fb9b146b6296057ba6a` — `docs: record blank CSV limit correction`
-
-## 11. Settings/data operation serialization
-
-`src/components/SettingsDialog.tsx` now has one synchronous action lock covering theme, reduced motion, notifications, export, import, and delete-all operations.
-
-While pending:
+While an action is pending:
 
 - relevant controls/file inputs are disabled
 - close is disabled
 - Escape is blocked
 - backdrop dismissal is blocked
-- same-tick dismissal is guarded by the ref lock
+- same-tick dismissal uses the synchronous ref lock
 
-Key commits:
+Safe error copy remains retryable and stale dialog errors clear after close/reopen.
 
-- `58441682aa0f59fa7e9f99aa284c3a69426b0075` — `fix: serialize settings and data actions`
-- `80a6d60ce07b141fc47d0e61d10025fa044cc0dc` — `test: cover serialized settings actions`
-- `8954ca44fbfebc7fcc0869228c7cc23ba5745109` — `fix: guard settings dismissal with action lock`
+## 8. Import file selection is cleared before asynchronous work
 
-## 12. Onboarding completion serialization
+The hidden JSON/CSV file input previously cleared its value only **after** the asynchronous import action settled.
 
-Onboarding Start now uses a synchronous completion lock, busy semantics, disabled action state, safe error copy, and retry-safe cleanup.
+It now clears `event.target.value` immediately after capturing the selected `File`, before checking/awaiting asynchronous work.
 
-Key commits:
+Benefits:
 
-- `190f2f86a887f8479870e99aa4b2f4abe5394c96` — `fix: serialize onboarding completion`
-- `ab97ff7149ccb76fc9d8f2b6685e9a07e4845b08` — `test: cover onboarding completion lock`
+- selecting the same file again never depends on the previous promise settling
+- a stale same-value file input cannot survive into the next retry window
+- file content is still captured in the local `File` object before the DOM value is cleared
+- action serialization remains unchanged
 
-## 13. PWA update activation serialization
+`tests/SettingsDialog.test.tsx` now holds JSON import pending and verifies that the selected input value is already empty while the dialog is still `aria-busy="true"`.
 
-The explicit Update now action can no longer call `updateServiceWorker(true)` repeatedly while activation is pending.
+Latest commits before this handoff:
 
-It now exposes busy state, disables Update/Later while pending, preserves safe failure copy, and becomes retryable afterward.
+- `fix: clear selected import files before async work`
+- `test: clear import selection before async settle`
+- `docs: record import input retry hardening`
 
-Key commits:
+## 9. Onboarding completion serialization
 
-- `2bdbe9a50ea6a9cee411255347b6f2b6972a5e64` — `fix: serialize PWA update activation`
-- `72e7f6d78650507a3064247713d6893ec4f28716` — `test: cover PWA update activation lock`
+Onboarding Start uses a synchronous completion lock with disabled/busy semantics, safe failure copy, and retry-safe cleanup.
 
-## 14. Diagnostic privacy fails closed
+## 10. PWA update activation serialization
 
-Development `logError(...)` omits arbitrary exception message text and retains only coarse error kind or stable TaskMint error code.
+Update now cannot call `updateServiceWorker(true)` repeatedly while activation is pending.
 
-Development `logEvent(...)` now retains only:
+Update/Later are disabled during activation, failure copy remains safe, and retry becomes available afterward.
+
+## 11. Fail-closed development diagnostics
+
+`logError(...)` omits arbitrary exception message text and emits only coarse error kind or stable TaskMint error code.
+
+`logEvent(...)` keeps only:
 
 - `null`
 - booleans
 - numbers
-- restricted identifier strings under restricted identifier key forms
+- restricted identifier strings under restricted identifier-key forms
 
-Identifier key allowlist:
+Identifier key forms:
 
 - `id`
 - camel/Pascal `...Id` / `...ID`
 - snake-case `..._id`
 
-Identifier value pattern:
+Identifier values:
 
 - `[A-Za-z0-9._:-]{1,128}`
 
-All other strings, nested structures, arrays, sensitive-key metadata, unsafe IDs, and lookalike ordinary keys are redacted.
+Everything else is redacted.
 
-A deeper audit fixed an earlier `/id$/i` matcher because words such as `valid` and `grid` also end with those letters.
+A deeper audit replaced an overly broad `/id$/i` matcher because ordinary words such as `valid` and `grid` also end in those letters.
 
-Key commits:
+## 12. Sidebar accessibility semantics
 
-- `6509c65f55341e1f795856a170106ed4d8775750` — `fix: fail closed for diagnostic event metadata`
-- `0b35e5e5fb3fd232e4e27212a9cf29db80f30e2f` — `test: cover fail-closed event metadata logging`
-- `4d6db22f67dc417da529c8bea5dca224240373fe` — `security: restrict diagnostic identifier keys`
-- `1979d2e240e33fb2170f9bf121938bcc64802f94` — `test: reject lookalike diagnostic id keys`
+Sidebar now exposes:
 
-## 15. Sidebar accessibility semantics
-
-The Sidebar now exposes current selection correctly and keeps all navigation controls inside the navigation landmark:
-
-- active smart view -> `aria-current="page"`
-- active project -> `aria-current="page"`
-- smart view not simultaneously current when a project is selected
-- project buttons are inside `<nav>`
+- active smart view with `aria-current="page"`
+- active project with `aria-current="page"`
+- no simultaneous current smart view while project selection is active
+- both smart-view and project selectors inside the `<nav>` landmark
 
 Recent commits:
 
-- `2d0a83649cab6b1dcb2ab6c5397403f63caf5481` — `fix: keep project controls inside navigation landmark`
-- `0c25af92da58fc9e085a3760732f29225eb74aa6` — `test: keep project selectors in sidebar navigation`
+- `2d0a83649cab6b1dcb2ab6c5397403f63caf5481` — project controls inside navigation landmark
+- `0c25af92da58fc9e085a3760732f29225eb74aa6` — landmark regression
 
-## 16. Toolbar accessibility grouping
+## 13. Toolbar accessibility grouping
 
-The Toolbar's search/filter container now has meaningful group semantics:
+Search/filter controls now live in a named semantic group:
 
 - `role="group"`
 - `aria-label={strings.searchFiltersLabel}`
 
-Tests preserve search shortcut metadata and verify priority/tag/sort callbacks.
+Tests preserve shortcut metadata and priority/tag/sort callback behavior.
 
-## 17. Documentation synchronized
+## 14. Documentation synchronization
 
-`ROADMAP.md` records the RC7 second-wave reliability work.
+`ROADMAP.md` records the RC7 reliability/accessibility/import/concurrency hardening.
 
-- `918d734636d6ba4bb623f070c09aae14ea4add2b` — `docs: record second RC7 hardening wave`
+`CHANGELOG.md` records:
 
-`CHANGELOG.md` records cross-row mutation hardening, collision-free ordering, CSV diagnostics/limits, logger privacy tightening, and accessibility fixes.
+- cross-row mutation serialization
+- collision-free recurrence/CSV ordering
+- CSV source-row diagnostics
+- blank-row limit correction
+- diagnostic privacy tightening
+- accessibility semantics
+- immediate import-input clearing
 
-- `fdd742aa361aa94baf7b6eae3abf5527b5675220` — `docs: record cross-row and import hardening`
-- `2407d45e2e88941d86b38fb9b146b6296057ba6a` — `docs: record blank CSV limit correction`
-
-The previous RC6 handoff was archived before root refresh:
-
-- `ed984f1754081943dcd53a624e7fb1a73db93a38` — `docs: archive RC6 continuation handoff`
+The previous RC6 handoff remains archived unchanged.
 
 ---
 
@@ -391,84 +347,62 @@ The previous RC6 handoff was archived before root refresh:
 
 - `CHANGELOG.md`
 - `ROADMAP.md`
-- `docs/handoffs/what_changed-rc6-2026-08-19.md` — archived previous handoff
-- `what_changed.md` — this final RC7 handoff
+- `docs/handoffs/what_changed-rc6-2026-08-19.md`
+- `what_changed.md`
 
-The final pre-handoff comparison reported **58 commits ahead, 0 behind**, with 32 changed files relative to `main`. This handoff commit increases the branch count by one.
+The final pre-handoff comparison reported **62 commits ahead, 0 behind**, with 32 changed files relative to `main`. This handoff commit itself increases the branch to 63 commits ahead.
 
 ---
 
-# Regression coverage added/expanded
+# New/expanded regression coverage
 
 RC7 explicitly covers:
 
-- duplicate TaskComposer submissions
-- externally locked TaskComposer
-- duplicate TaskItem mutations
-- externally locked TaskItem
-- App cross-row mutation exclusion
+- duplicate TaskComposer submission
+- external TaskComposer mutation lock
+- duplicate TaskItem mutation
+- external TaskItem mutation lock
+- App cross-row write exclusion
 - exclusive gate competing calls
-- exclusive gate busy-error behavior
+- exclusive gate safe busy errors
 - exclusive gate action-failure cleanup
-- exclusive gate busy-state-entry failure cleanup
+- exclusive gate busy-state callback failure cleanup
 - repository task/settings write validation
-- complete batch validation before transaction open
+- full batch validation before transaction
 - duplicate batch IDs
-- duplicate batch stable error contract
-- restore validation before destructive transaction
-- Settings serialization/busy/no-dismiss behavior
+- duplicate batch typed error contract
+- backup validation before destructive restore transaction
+- Settings action serialization
+- Settings no-dismiss behavior
+- immediate import input clearing while async import remains pending
 - onboarding duplicate completion and safe failure
 - PWA duplicate activation and safe retry
-- logger arbitrary metadata redaction
-- safe identifier retention
-- unsafe/lookalike identifier redaction
+- fail-closed event metadata
+- safe identifier retention and lookalike key redaction
 - explicit recurring order allocation
 - invalid recurring order rejection
-- CSV row-number preservation after blanks
-- CSV contiguous caller-provided ordering
-- blank CSV rows excluded from task-count limit
-- active smart-view semantics
-- active project semantics
+- CSV source-row preservation
+- contiguous caller-provided CSV ordering
+- blank CSV records excluded from task-count limit
+- active smart-view/project semantics
 - Sidebar navigation containment
 - Toolbar named group and callbacks
 
-These extend the earlier unit/property/stress/migration/offline/browser/accessibility/security/release test inventory preserved in the archived RC6 handoff.
+These extend the earlier unit/property/stress/migration/offline/browser/accessibility/security/release test inventory documented in the archived RC6 handoff.
 
 ---
 
-# Static/code audit performed
+# Verification attempted in this continuation
 
-The continuation reviewed current code around:
+A clean local clone was also attempted to obtain independent dependency-backed evidence, but this execution environment cannot resolve external GitHub/network hosts. Therefore no local npm/test pass has been fabricated or claimed.
 
-- startup/load failure behavior
-- create/edit/complete/reopen/archive/restore/delete/undo
-- recurrence generation
-- manual-order allocation/reordering
-- cross-row asynchronous persistence
-- TaskComposer
-- TaskItem
-- Sidebar
-- Toolbar
-- Settings
-- Onboarding
-- PWA waiting-worker activation
-- repository/Dexie boundaries
-- backup validation/normalization
-- CSV parsing/import merge/limits
-- reminders
-- diagnostic logging/privacy
-- TypeScript strict project configuration
-- type-aware ESLint boundaries
-- existing and new relevant tests
-- branch comparison against exact current `main`
-
-Where an audited path was already correct, no artificial commit was added just to inflate count.
+Hosted GitHub workflows have repeatedly been created for exact PR heads, but when last checked they were queued/pending rather than successful. Because the head moved again for the final import-selection hardening, those earlier runs are stale.
 
 ---
 
 # Still not dependency-backed verified
 
-The following remain release blockers until real runners prove them for the exact current tree:
+These remain release blockers:
 
 - clean dependency resolution
 - real npm-generated `package-lock.json`
@@ -482,36 +416,34 @@ The following remain release blockers until real runners prove them for the exac
 - manual release checklist
 - real release screenshots
 
-Do not substitute source review, PR mergeability, queued jobs, or stale workflow conclusions for these gates.
+No source review, mergeability state, queued run, or stale successful run may replace these gates.
 
 ---
 
 # Exact next work
 
-## 1. Freeze and verify PR #17 current head
+## 1. Verify the exact current PR #17 head
 
-After this commit:
+After this handoff commit:
 
 1. fetch PR #17
 2. obtain the exact resulting head SHA
-3. fetch workflow runs for that SHA only
-4. require CI success
-5. require E2E success
-6. require CodeQL success
-7. inspect actual failing jobs/logs if any fail
-8. fix proven failures and repeat exact-head verification if the branch changes again
+3. fetch CI/E2E/CodeQL runs for that SHA only
+4. require explicit success for all required workflows
+5. inspect actual failing job/log evidence if any fail
+6. fix only proven failures and repeat exact-head verification if the branch changes
 
-## 2. Merge only after successful exact-head checks
+## 2. Merge only after exact-head success
 
-Do not merge on mergeability alone.
+Do not merge because the PR is merely mergeable.
 
-## 3. Re-verify resulting exact `main`
+## 3. Verify resulting exact `main`
 
-After merge, verify CI/E2E/CodeQL on the actual resulting `main` tree.
+After merge, verify the actual resulting `main` tree again.
 
 ## 4. Generate the real npm lockfile
 
-Use a network-enabled environment and npm itself. Review and commit the generated file. Never fabricate it.
+Use npm in a network-enabled environment, review the generated lockfile, and commit it. Never fabricate it.
 
 ## 5. Run locked release gates
 
@@ -523,31 +455,32 @@ Required:
 - `npm run test:e2e:install`
 - `npm run test:e2e`
 
-## 6. Complete manual verification
+## 6. Complete manual browser verification
 
 Verify:
 
 - keyboard-only task lifecycle
-- global shortcuts and pending-mutation blocking
-- cross-row write blocking
+- global shortcuts and pending-mutation guards
+- cross-row write exclusion
 - busy/disabled semantics
-- Settings focus and no-dismiss behavior
+- Settings focus/no-dismiss behavior
+- same-file JSON/CSV import retry
 - Sidebar/Toolbar accessibility semantics
 - 200% zoom/reflow
-- system/light/dark themes
+- light/dark/system themes
 - reduced motion
 - offline lifecycle
 - JSON restore
-- CSV export/import, blank records, and merges into existing tasks
-- browser reminder permission/privacy/aggregation
-- corrupt local-data recovery state
+- CSV export/import, blank rows, limits, and merge ordering
+- reminder permission/privacy/aggregation
+- corrupt local-data recovery
 - PWA waiting update with unsaved draft
-- explicit Update now activation
+- explicit Update now
 - delete-all local data
 
 ## 7. Capture real screenshots
 
-Use the verified real browser build with fictional/demo data only.
+Only from the verified real browser build with fictional/demo data.
 
 ## 8. Release only after every gate is green
 
@@ -557,14 +490,14 @@ Run:
 
 Only then create `v0.1.0`.
 
-The tagged release workflow must independently pass quality/audit/E2E and publish the web artifact plus SHA-256 checksum.
+The tagged workflow must independently pass quality/audit/E2E and publish the artifact plus SHA-256 checksum.
 
 ---
 
 # Continuation rules
 
 1. Read this file first.
-2. Read `docs/handoffs/what_changed-rc6-2026-08-19.md` only for deeper previous history.
+2. Use `docs/handoffs/what_changed-rc6-2026-08-19.md` for deeper previous history.
 3. Check PR #17 on its exact current head.
 4. Never call queued/pending/cancelled/missing/stale checks successful.
 5. Fix only proven CI/E2E/CodeQL failures or concrete source defects.

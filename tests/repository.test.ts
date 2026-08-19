@@ -1,32 +1,36 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createTask } from '../src/domain/task';
-import type { AppSettings, Task } from '../src/domain/types';
+import type { AppSettings, Task, TaskBackup } from '../src/domain/types';
 import type { TaskMintDatabase } from '../src/storage/db';
 import { TaskRepository, defaultSettings } from '../src/storage/repository';
 
 function repositoryHarness() {
   const putTask = vi.fn(async (_task: Task) => undefined);
   const bulkPut = vi.fn(async (_tasks: Task[]) => undefined);
+  const clearTasks = vi.fn(async () => undefined);
   const toArray = vi.fn(async (): Promise<Task[]> => []);
   const getSettings = vi.fn(async (): Promise<AppSettings | undefined> => undefined);
   const putSettings = vi.fn(async (_settings: AppSettings) => undefined);
-  const transaction = vi.fn(
-    async (_mode: string, _table: unknown, scope: () => Promise<void>): Promise<void> => {
-      await scope();
-    }
-  );
+  const clearSettings = vi.fn(async () => undefined);
+  const transaction = vi.fn(async (...args: unknown[]): Promise<void> => {
+    const scope = args.at(-1);
+    if (typeof scope !== 'function') throw new Error('missing transaction scope');
+    await (scope as () => Promise<void>)();
+  });
   const database = {
-    tasks: { put: putTask, bulkPut, toArray },
-    settings: { get: getSettings, put: putSettings },
+    tasks: { put: putTask, bulkPut, clear: clearTasks, toArray },
+    settings: { get: getSettings, put: putSettings, clear: clearSettings },
     transaction
   } as unknown as TaskMintDatabase;
   return {
     repository: new TaskRepository(database),
     putTask,
     bulkPut,
+    clearTasks,
     toArray,
     getSettings,
     putSettings,
+    clearSettings,
     transaction
   };
 }
@@ -79,6 +83,21 @@ describe('TaskRepository validated writes', () => {
 
     await expect(repository.saveSettings(malformed)).rejects.toThrow(/theme/i);
     expect(putSettings).not.toHaveBeenCalled();
+  });
+
+  it('validates a restore completely before opening its destructive transaction', async () => {
+    const { repository, transaction, clearTasks, clearSettings } = repositoryHarness();
+    const malformed = {
+      app: 'TaskMint',
+      schemaVersion: 2,
+      exportedAt: '2026-08-19T08:00:00.000Z',
+      tasks: [{ ...createTask({ title: 'Invalid restore' }), order: 1.5 }]
+    } as TaskBackup;
+
+    await expect(repository.restoreBackup(malformed)).rejects.toThrow(/order/i);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(clearTasks).not.toHaveBeenCalled();
+    expect(clearSettings).not.toHaveBeenCalled();
   });
 });
 

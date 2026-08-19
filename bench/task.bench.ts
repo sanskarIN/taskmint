@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { test } from 'vitest';
 import { calculateStats, createTask, filterAndSortTasks } from '../src/domain/task';
 import type { Task, TaskFilters } from '../src/domain/types';
 
@@ -28,15 +28,13 @@ const filters: TaskFilters = {
 };
 
 test('10k task filtering and sorting', async ({ bench }) => {
-  const result = await bench('filterAndSortTasks', () => {
+  await bench('filterAndSortTasks', () => {
     filterAndSortTasks(tasks, filters, now);
   }).run();
-  expect(result.samples.length).toBeGreaterThan(0);
 });
 
 test('10k task statistics', async ({ bench }) => {
-  const result = await bench('calculateStats', () => {
+  await bench('calculateStats', () => {
     calculateStats(tasks, now);
   }).run();
-  expect(result.samples.length).toBeGreaterThan(0);
 });

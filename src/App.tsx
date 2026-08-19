@@ -7,6 +7,7 @@ import { TaskComposer } from './components/TaskComposer';
 import { TaskItem } from './components/TaskItem';
 import { Toolbar } from './components/Toolbar';
 import { TASK_PAGE_SIZE } from './config';
+import { fail } from './domain/errors';
 import { TASK_LIMITS } from './domain/limits';
 import {
   archiveTask,
@@ -181,13 +182,14 @@ export default function App() {
   async function saveDraft(draft: TaskDraft) {
     if (editingTask) {
       const next = updateTask(editingTask, draft);
-      if (editingTask.reminderAt !== next.reminderAt) notifiedIds.current.delete(next.id);
+      const reminderChanged = editingTask.reminderAt !== next.reminderAt;
       try {
         await repository.putTask(next);
       } catch (error) {
         logError('task_update_failed', error);
         throw new Error(strings.taskSavedError);
       }
+      if (reminderChanged) notifiedIds.current.delete(next.id);
       setTasks((current) => current.map((task) => (task.id === next.id ? next : task)));
       setEditingTask(null);
       setToast({ message: strings.taskUpdated });
@@ -583,6 +585,6 @@ function viewTitle(filters: TaskFilters): string {
 }
 
 async function readFile(file: File): Promise<string> {
-  if (file.size > TASK_LIMITS.importBytes) throw new Error(strings.importTooLarge);
+  if (file.size > TASK_LIMITS.importBytes) fail('import-file-too-large');
   return file.text();
 }

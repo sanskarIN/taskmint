@@ -18,7 +18,7 @@ The project follows Semantic Versioning for tagged releases.
 - Shared task/import limits used by domain validation, backup validation, CSV import, and UI affordances.
 - Externalized English UI string catalog for localization readiness.
 - Theme, reduced-motion, onboarding, responsive layout, About/support/funding UI, and local-data deletion.
-- Unit, component, data-portability, deterministic CSV stress, keyboard, migration, offline, backup/restore, accessibility, pagination, and Chromium E2E coverage.
+- Unit, component, data-portability, deterministic CSV stress, keyboard, notification, migration, offline, backup/restore, accessibility, pagination, and Chromium E2E coverage.
 - CI, E2E, CodeQL, Dependabot, and release workflows.
 - CI/CodeQL/E2E concurrency controls that cancel superseded runs on the same ref.
 - Security, privacy, accessibility, performance, release, troubleshooting, architecture, and GitHub governance documentation.
@@ -31,6 +31,7 @@ The project follows Semantic Versioning for tagged releases.
 - Reject malformed CSV enums, dates, duplicate headers, and unterminated quoted fields instead of silently coercing invalid records.
 - Accept a UTF-8 BOM on the first CSV header while retaining strict schema validation.
 - Preserve recurring reminder schedules for recurring tasks that do not have a due date.
+- Isolate browser notification-constructor failures so one failed notification cannot escape the reminder polling loop; failed deliveries remain eligible for a later retry.
 - Reject impossible calendar dates during normal task creation/update instead of silently dropping them.
 - Persist a recurring task completion and its generated next occurrence atomically.
 - Surface IndexedDB failures for task create/edit/complete/reopen/archive/restore/delete/undo/reorder and local-data deletion before mutating React state.

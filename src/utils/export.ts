@@ -169,13 +169,13 @@ function decodeCsvTags(value: string): string[] {
 
 function encodeSpreadsheetText(value: string): string {
   if (value.startsWith("'")) return `'${value}`;
-  return /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return /^[\t\r\n ]*[=+\-@]/.test(value) ? `'${value}` : value;
 }
 
 function decodeSpreadsheetText(value: string, encoding: string): string {
   if (encoding !== csvEncodingValue) return value;
   if (value.startsWith("''")) return value.slice(1);
-  return /^'[=+\-@]/.test(value) ? value.slice(1) : value;
+  return /^'[\t\r\n ]*[=+\-@]/.test(value) ? value.slice(1) : value;
 }
 
 function csvCell(value: string): string {

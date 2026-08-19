@@ -8,7 +8,8 @@ The roadmap favors coherent improvements over feature count.
 - [x] Projects, tags, priorities, notes, due dates, reminders, recurrence
 - [x] Search, smart views, filters, sorting, and deterministic manual reordering
 - [x] Safe-integer task-order allocation and duplicate-order normalization
-- [x] Global search/new-task keyboard shortcuts with modal/typing safeguards
+- [x] Collision-free order allocation for recurring occurrences and CSV merges
+- [x] Global search/new-task keyboard shortcuts with modal/typing/pending-mutation safeguards
 - [x] Date-sensitive views/statistics refresh while the app remains open
 - [x] IndexedDB persistence and schema migration
 - [x] Validated IndexedDB reads with fail-closed corrupt-data startup recovery
@@ -16,10 +17,12 @@ The roadmap favors coherent improvements over feature count.
 - [x] Full backup preflight validation before destructive restore transactions begin
 - [x] Duplicate task-ID rejection before bulk persistence
 - [x] Atomic multi-task writes for imports, recurring completion, and reordering
+- [x] App-wide exclusive task mutation gate preventing competing cross-row/task-form writes
 - [x] JSON/CSV portability and local deletion
 - [x] Lossless versioned CSV tag encoding with legacy import compatibility
 - [x] Spreadsheet-formula neutralization for user-controlled CSV text fields
 - [x] Strict CSV encoding-version and quote-placement validation
+- [x] Accurate CSV record diagnostics across skipped blank records
 - [x] Strict calendar/timestamp parsing without JavaScript rollover acceptance
 - [x] Strict shared limits and malformed import rejection
 - [x] Stable typed validation/import error codes and safe unknown-error UI fallbacks
@@ -28,12 +31,13 @@ The roadmap favors coherent improvements over feature count.
 - [x] Bounded browser-reminder delivery with count-only aggregation for excess due reminders
 - [x] Serialized task composer, task-row, onboarding, Settings, and PWA update actions to prevent duplicate pending mutations
 - [x] Responsive themes and accessibility baseline
+- [x] Active smart-view/project `aria-current`, named filter grouping, and complete Sidebar navigation landmark semantics
 - [x] Externalized English product string catalog
 - [x] Progressive large-list rendering
 - [x] PWA configuration with explicit waiting/update prompt instead of automatic draft-destructive reloads
 - [x] Production CSP separated from Vite development-only relaxations
 - [x] Automated unit/component/parser-stress/property/download/CSP/repository/datetime/PWA/migration/corrupt-data/offline/backup/keyboard/accessibility/pagination tests
-- [x] Component regression coverage for duplicate submission/mutation/update locks and safe error states
+- [x] Component regression coverage for duplicate submission/mutation/update locks, cross-row exclusivity, navigation semantics, and safe error states
 - [x] Repeatable 10,000-task filtering/statistics benchmark harness using the pinned Vitest 4 API
 - [x] Deterministic documentation-link and secret-pattern repository checks
 - [x] CI, E2E, CodeQL, Dependabot, release, and repository-governance automation baseline

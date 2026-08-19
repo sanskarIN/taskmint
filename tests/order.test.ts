@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { compareTaskOrder, nextTaskOrder } from '../src/domain/order';
-import { createTask, filterAndSortTasks } from '../src/domain/task';
+import {
+  compareTaskOrder,
+  nextTaskOrder,
+  normalizeDuplicateTaskOrders
+} from '../src/domain/order';
+import { createTask, filterAndSortTasks, reorderVisibleTasks } from '../src/domain/task';
 import type { TaskFilters } from '../src/domain/types';
 
 const manualFilters: TaskFilters = {
@@ -40,5 +44,24 @@ describe('task order allocation', () => {
       'a',
       'b'
     ]);
+  });
+
+  it('normalizes duplicate numeric slots while preserving deterministic visible order', () => {
+    const now = new Date('2026-08-19T06:00:00.000Z');
+    const tasks = [
+      { ...createTask({ title: 'B' }, now, 1000), id: 'b' },
+      { ...createTask({ title: 'A' }, now, 1000), id: 'a' },
+      { ...createTask({ title: 'C' }, now, 3000), id: 'c' }
+    ];
+
+    const normalized = normalizeDuplicateTaskOrders(tasks);
+    expect([...normalized].sort(compareTaskOrder).map((task) => task.id)).toEqual(['a', 'b', 'c']);
+    expect(new Set(normalized.map((task) => task.order)).size).toBe(normalized.length);
+    expect(reorderVisibleTasks(normalized, 'b', 'a')).not.toHaveLength(0);
+  });
+
+  it('leaves already unique task orders untouched', () => {
+    const tasks = [createTask({ title: 'One' }, new Date(), 1000), createTask({ title: 'Two' }, new Date(), 2000)];
+    expect(normalizeDuplicateTaskOrders(tasks)).toBe(tasks);
   });
 });

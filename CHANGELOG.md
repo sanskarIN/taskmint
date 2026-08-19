@@ -31,12 +31,16 @@ The project follows Semantic Versioning for tagged releases.
 - Seeded deterministic data-portability properties covering hundreds of parser-sensitive CSV/JSON round trips.
 - Repeatable Vitest 4 benchmark harness for 10,000-task filtering/sorting and productivity statistics.
 - Dependency-free Markdown relative-link validation through `npm run docs:check`.
+- Dependency-free tracked-file/test documentation completeness validation through `npm run docs:inventory`.
+- Machine-audited `docs/file-index.md` covering every tracked repository path and `docs/test-matrix.md` covering every current test/E2E/benchmark/shared-test-setup path.
+- Complete end-user guide, data model/portability reference, operations handbook, test matrix, detailed repository ownership map, documentation index, and expanded setup/development/testing/accessibility/performance/release/troubleshooting/GitHub governance guides.
+- Architecture Decision Records for persistence-boundary validation, exclusive task mutation serialization, and explicitly versioned data portability.
 - Dependency-free common secret-pattern defense-in-depth scanning through `npm run secrets:check`.
 - Dependency-free release readiness guard through `npm run release:check -- vX.Y.Z`.
 - CI, E2E, CodeQL, Dependabot, and release workflows.
 - CI/CodeQL/E2E concurrency controls that cancel superseded runs on the same ref.
 - Tagged-release SHA-256 checksum generation for the packaged web artifact.
-- Security, privacy, accessibility, performance, release, troubleshooting, architecture, and GitHub governance documentation.
+- Security, privacy, accessibility, performance, release, troubleshooting, architecture, GitHub governance, and complete repository documentation.
 - Keyboard focus trapping/restoration for onboarding and Settings dialogs.
 - Package-derived version display in the About section.
 
@@ -97,19 +101,35 @@ The project follows Semantic Versioning for tagged releases.
 - Keep executable scripts restricted to the application origin and continue blocking objects, foreign base URLs, and foreign form submissions.
 - Satisfy strict TypeScript override checks in the React error boundary.
 - Include E2E and benchmark TypeScript files plus PWA React module types in the type-aware project and scope type-aware ESLint away from maintenance scripts.
+- Correct documentation that could imply current IndexedDB indexes power every smart-view query; the current implementation primarily filters/sorts the validated in-memory task set.
+- Synchronize security/privacy documentation with repository write validation, App-wide task mutation serialization, and the fail-closed diagnostic metadata allowlist.
+
+### Documentation
+
+- Added `docs/README.md` as the complete documentation navigation hub.
+- Added `docs/user-guide.md` for the full product/user workflow.
+- Added `docs/data-model.md` as the human-readable Task/Settings/Backup/IndexedDB/JSON/CSV contract.
+- Added `docs/operations.md` for npm scripts, CI/E2E/CodeQL/release, lockfile, CSP/PWA, and exact-SHA operations.
+- Added `docs/test-matrix.md` mapping every automated test/E2E/benchmark/shared setup file to protected behavior.
+- Added `docs/file-index.md` as the exact tracked-path inventory checked against `git ls-files`.
+- Reconciled `docs/repository-reference.md` as the detailed ownership/coupling guide, with exact path exhaustiveness delegated to the machine-audited file index.
+- Expanded README, CONTRIBUTING, setup, development, architecture, testing, accessibility, performance, release, troubleshooting, support, security, privacy, GitHub governance, and screenshot policy so they agree with current RC7 implementation and verification rules.
+- Preserved the previous RC6 continuation handoff unchanged under `docs/handoffs/` rather than discarding project history.
 
 ### Release hardening
 
-- `npm run check` includes formatting invariants, documentation-link validation, secret-pattern validation, linting, TypeScript checks, unit/component/property tests, and the production build.
-- Pull-request CI runs the repository hygiene checks in addition to lint/type/test/build/audit gates and automatically switches to `npm ci` once a lockfile is committed.
+- `npm run check` now includes formatting invariants, documentation-link validation, complete documentation inventory validation, secret-pattern validation, linting, TypeScript checks, unit/component/property/config tests, and the production build.
+- Pull-request CI runs the documentation inventory explicitly in addition to the repository hygiene/lint/type/test/build/audit gates and automatically switches to `npm ci` once a lockfile is committed.
+- Documentation inventory fails if any tracked path is absent from `docs/file-index.md` or any current test/E2E/benchmark/shared-test-setup path is absent from `docs/test-matrix.md`.
 - E2E workflow dependency installation also automatically switches to `npm ci` once a lockfile is committed.
 - Core workflow actions are upgraded to current supported majors: checkout/setup-node v6, upload-artifact v7, and CodeQL v4; Dependabot continues monitoring GitHub Actions monthly.
 - Tagged releases fail closed unless the Git tag exactly matches `package.json` and a committed `package-lock.json` exists.
 - Tagged releases install dependencies with `npm ci --ignore-scripts`, then must pass `npm run check`, `npm audit --audit-level=high`, Chromium installation, and Playwright E2E before publication.
 - Tagged releases publish both the compressed web bundle and its SHA-256 checksum.
+- A future generated lockfile and real screenshot files must themselves be added to the tracked-file documentation inventory before release.
 - A real npm-generated `package-lock.json` remains required before the first release and will not be fabricated while registry access is unavailable.
 - Real release screenshots remain required from a browser-verified build and will not be fabricated.
 
 ### Release candidate status
 
-The package version is `0.1.0`, but no `v0.1.0` release tag has been created. Promote these Unreleased changes to `0.1.0` only after the current hardening branch is successfully verified and merged, then a fresh exact-`main` verification candidate receives successful hosted CI, E2E, and CodeQL conclusions; a clean npm installation produces the real lockfile; `npm ci`/check/audit/E2E and the manual release checklist pass; and real release screenshots are captured.
+The package version is `0.1.0`, but no `v0.1.0` release tag has been created. Promote these Unreleased changes to `0.1.0` only after the current documentation/hardening branch is successfully verified and merged, then the resulting exact `main` tree receives required successful hosted verification; a clean npm installation produces the real lockfile; locked check/audit/E2E and the manual release checklist pass; and real release screenshots are captured and documented.

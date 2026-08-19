@@ -37,6 +37,7 @@ export type TaskMintErrorCode =
   | 'csv-invalid-priority'
   | 'csv-invalid-recurrence'
   | 'csv-invalid-status'
+  | 'csv-invalid-encoding'
   | 'csv-invalid-tags'
   | 'csv-row-invalid'
   | 'csv-unterminated-quote'
@@ -145,6 +146,8 @@ export function errorMessage(code: TaskMintErrorCode, details: TaskMintErrorDeta
       return `CSV row ${details.row ?? '?'} has an invalid recurrence.`;
     case 'csv-invalid-status':
       return `CSV row ${details.row ?? '?'} has an invalid status.`;
+    case 'csv-invalid-encoding':
+      return `CSV row ${details.row ?? '?'} uses an unsupported TaskMint encoding.`;
     case 'csv-invalid-tags':
       return 'CSV contains an invalid structured tag field.';
     case 'csv-row-invalid':

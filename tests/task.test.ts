@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   addRecurrence,
   calculateStats,
@@ -18,11 +18,6 @@ const filters: TaskFilters = {
   priority: 'all',
   sort: 'manual'
 };
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
 
 describe('task domain', () => {
   it('normalizes task input', () => {

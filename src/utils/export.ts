@@ -1,6 +1,7 @@
-import type { AppSettings, Task, TaskBackup } from '../domain/types';
-import { validateBackup } from '../domain/validation';
+import { TASK_LIMITS } from '../domain/limits';
 import { createTask } from '../domain/task';
+import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from '../domain/types';
+import { validateBackup } from '../domain/validation';
 
 const csvHeaders = [
   'title',
@@ -13,6 +14,10 @@ const csvHeaders = [
   'recurrence',
   'status'
 ] as const;
+
+const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
+const recurrences = new Set<Recurrence>(['none', 'daily', 'weekly', 'monthly']);
+const statuses = new Set<TaskStatus>(['active', 'completed', 'archived']);
 
 export function createBackup(tasks: Task[], settings?: AppSettings): TaskBackup {
   return {
@@ -29,7 +34,7 @@ export function serializeBackup(tasks: Task[], settings?: AppSettings): string {
 }
 
 export function parseBackup(text: string): TaskBackup {
-  if (text.length > 25_000_000) throw new Error('Backup file is too large.');
+  if (text.length > TASK_LIMITS.importBytes) throw new Error('Backup file is too large.');
   return validateBackup(JSON.parse(text) as unknown);
 }
 
@@ -56,43 +61,24 @@ export function tasksToCsv(tasks: Task[]): string {
 }
 
 export function csvToTasks(csv: string): Task[] {
-  if (csv.length > 25_000_000) throw new Error('CSV file is too large.');
+  if (csv.length > TASK_LIMITS.importBytes) throw new Error('CSV file is too large.');
   const rows = parseCsv(csv);
   if (rows.length === 0) return [];
-  const headers = rows[0]?.map((h) => h.trim()) ?? [];
+  if (rows.length - 1 > TASK_LIMITS.backupTasks) throw new Error('CSV contains too many tasks.');
+
+  const headers = rows[0]?.map((header, index) => {
+    const trimmed = header.trim();
+    return index === 0 ? trimmed.replace(/^\uFEFF/, '') : trimmed;
+  }) ?? [];
   const missing = csvHeaders.filter((header) => !headers.includes(header));
   if (missing.length) throw new Error(`CSV is missing columns: ${missing.join(', ')}`);
-  return rows.slice(1).filter((row) => row.some(Boolean)).map((row, index) => {
-    const value = (name: (typeof csvHeaders)[number]) => row[headers.indexOf(name)] ?? '';
-    const priority = value('priority');
-    const recurrence = value('recurrence');
-    const task = createTask(
-      {
-        title: value('title'),
-        notes: value('notes'),
-        priority: priority === 'low' || priority === 'high' || priority === 'urgent' ? priority : 'medium',
-        dueDate: value('dueDate') || null,
-        reminderAt: value('reminderAt') || null,
-        tags: value('tags').split('|').filter(Boolean),
-        project: value('project'),
-        recurrence:
-          recurrence === 'daily' || recurrence === 'weekly' || recurrence === 'monthly'
-            ? recurrence
-            : 'none'
-      },
-      new Date(),
-      Date.now() + index
-    );
-    const status = value('status');
-    if (status === 'completed') {
-      task.status = 'completed';
-      task.completedAt = new Date().toISOString();
-    } else if (status === 'archived') {
-      task.status = 'archived';
-      task.archivedAt = new Date().toISOString();
-    }
-    return task;
-  });
+  const duplicates = headers.filter((header, index) => headers.indexOf(header) !== index);
+  if (duplicates.length) throw new Error(`CSV contains duplicate columns: ${[...new Set(duplicates)].join(', ')}`);
+
+  return rows
+    .slice(1)
+    .filter((row) => row.some((cell) => cell.trim() !== ''))
+    .map((row, index) => parseCsvTask(row, headers, index + 2));
 }
 
 export function downloadText(filename: string, content: string, type: string): void {
@@ -107,6 +93,46 @@ export function downloadText(filename: string, content: string, type: string): v
   URL.revokeObjectURL(url);
 }
 
+function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task {
+  const value = (name: (typeof csvHeaders)[number]) => row[headers.indexOf(name)] ?? '';
+  const priority = value('priority') as Priority;
+  const recurrence = value('recurrence') as Recurrence;
+  const status = value('status') as TaskStatus;
+
+  if (!priorities.has(priority)) throw new Error(`CSV row ${rowNumber} has an invalid priority.`);
+  if (!recurrences.has(recurrence)) throw new Error(`CSV row ${rowNumber} has an invalid recurrence.`);
+  if (!statuses.has(status)) throw new Error(`CSV row ${rowNumber} has an invalid status.`);
+
+  try {
+    const now = new Date();
+    const task = createTask(
+      {
+        title: value('title'),
+        notes: value('notes'),
+        priority,
+        dueDate: value('dueDate') || null,
+        reminderAt: value('reminderAt') || null,
+        tags: value('tags').split('|').filter(Boolean),
+        project: value('project'),
+        recurrence
+      },
+      now,
+      now.getTime() + rowNumber
+    );
+    if (status === 'completed') {
+      task.status = 'completed';
+      task.completedAt = now.toISOString();
+    } else if (status === 'archived') {
+      task.status = 'archived';
+      task.archivedAt = now.toISOString();
+    }
+    return task;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid task data.';
+    throw new Error(`CSV row ${rowNumber}: ${message}`);
+  }
+}
+
 function csvCell(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
@@ -116,12 +142,12 @@ function parseCsv(input: string): string[][] {
   let row: string[] = [];
   let cell = '';
   let quoted = false;
-  for (let i = 0; i < input.length; i += 1) {
-    const char = input[i];
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
     if (quoted) {
-      if (char === '"' && input[i + 1] === '"') {
+      if (char === '"' && input[index + 1] === '"') {
         cell += '"';
-        i += 1;
+        index += 1;
       } else if (char === '"') {
         quoted = false;
       } else {

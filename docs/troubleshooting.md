@@ -4,21 +4,33 @@
 
 Check browser site-storage settings and confirm IndexedDB is allowed. Private/incognito modes may clear data differently. Export a JSON backup before clearing site data.
 
-## PWA does not update immediately
+If TaskMint shows **Could not safely load local TaskMint data**, it detected a storage/read/validation problem and intentionally blocked the normal editor. Reload after resolving the browser-storage problem. Do not clear site data merely to make the message disappear unless you understand that clearing it removes the local records; preserve or inspect the browser profile first if the data matters.
 
-The service worker uses auto-update behavior, but a browser may keep an existing tab alive. Close/reopen the installed PWA or reload after the new service worker activates.
+## PWA update is waiting
+
+TaskMint intentionally does not use automatic tab reloads for updates because an automatic reload can discard unsaved task input. When a new version is ready, the app shows a TaskMint update notice with **Update now** and **Later**.
+
+Save any current task draft, then choose **Update now** to activate the waiting service worker and reload. Choosing **Later** dismisses the notice for the current session. If activation fails, TaskMint shows safe error text and leaves local task data unchanged.
 
 ## Notifications do not appear
 
 Confirm browser/OS notification permissions and TaskMint's notification setting. Reminders are checked while TaskMint is open; TaskMint does not claim reliable closed-app background scheduling on every browser/OS combination.
 
-Remember that reminder notification bodies contain task titles. If notification previews are hidden by the operating system, the reminder may arrive without visible detail until the device is unlocked.
+Individual reminder notification bodies contain task titles. If more than the small individual batch are due at once, TaskMint combines the excess into one count-only summary notification. If notification previews are hidden by the operating system, an individual reminder may arrive without visible detail until the device is unlocked.
 
 ## Import fails
 
-Confirm the file is a TaskMint schema-v2 JSON backup or CSV with all exported headers. Imports above the documented size/task-count limits are rejected. CSV enum/date problems report the affected row; malformed JSON is reported with a stable safe message rather than the browser's parser internals.
+Confirm the file is a TaskMint schema-v2 JSON backup or CSV with all required headers. Imports above the documented size/task-count limits are rejected.
+
+JSON rejects impossible calendar/timestamp values, unsafe task-order numbers, duplicate task IDs, incompatible status timestamps, malformed settings, and oversized fields before replacing current data.
+
+CSV rejects missing/duplicate required columns, malformed enums/dates/timestamps, unsupported non-empty TaskMint encoding versions, malformed structured tags, invalid quote placement, unterminated quotes, and task-field limit violations. Row-aware errors identify the affected record where applicable. Unmarked legacy pipe-separated tag cells remain supported, including legacy tag text beginning with `json:`.
 
 For a full-fidelity restore, prefer TaskMint JSON backups. CSV is an interchange format and does not preserve original completion/archive timestamps.
+
+## Export fails
+
+Browser Blob/object-URL/download APIs can fail because of browser policy or environment problems. TaskMint contains those failures inside Settings and shows generic export failure text instead of exposing browser internals. Existing local data is not changed by a failed export.
 
 ## `npm run docs:check` fails
 

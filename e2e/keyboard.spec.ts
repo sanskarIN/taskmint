@@ -5,7 +5,7 @@ test('supports global search and new-task keyboard shortcuts', async ({ page }) 
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
   if (await start.isVisible()) await start.click();
 
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
+  await page.keyboard.press('Control+K');
   const search = page.getByPlaceholder('Search tasks, notes, tags, or projects…');
   await expect(search).toBeFocused();
 

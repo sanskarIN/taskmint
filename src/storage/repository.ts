@@ -1,3 +1,4 @@
+import { normalizeDuplicateTaskOrders } from '../domain/order';
 import { validateSettings, validateTask } from '../domain/validation';
 import type { AppSettings, Task, TaskBackup } from '../domain/types';
 import { db, type TaskMintDatabase } from './db';
@@ -14,7 +15,8 @@ export class TaskRepository {
   constructor(private readonly database: TaskMintDatabase = db) {}
 
   async listTasks(): Promise<Task[]> {
-    return (await this.database.tasks.toArray()).map(validateTask);
+    const tasks = (await this.database.tasks.toArray()).map(validateTask);
+    return normalizeDuplicateTaskOrders(tasks);
   }
 
   async putTask(task: Task): Promise<void> {

@@ -1,13 +1,14 @@
 import type { SmartView } from '../domain/types';
+import { strings } from '../i18n/en';
 
 const views: Array<{ id: SmartView; label: string }> = [
-  { id: 'inbox', label: 'Inbox' },
-  { id: 'today', label: 'Today' },
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'overdue', label: 'Overdue' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'archived', label: 'Archived' },
-  { id: 'all', label: 'All tasks' }
+  { id: 'inbox', label: strings.viewInbox },
+  { id: 'today', label: strings.viewToday },
+  { id: 'upcoming', label: strings.viewUpcoming },
+  { id: 'overdue', label: strings.viewOverdue },
+  { id: 'completed', label: strings.viewCompleted },
+  { id: 'archived', label: strings.viewArchived },
+  { id: 'all', label: strings.viewAll }
 ];
 
 interface Props {
@@ -20,9 +21,9 @@ interface Props {
 
 export function Sidebar({ activeView, projects, activeProject, onView, onProject }: Props) {
   return (
-    <aside className="sidebar" aria-label="Task views">
+    <aside className="sidebar" aria-label={strings.taskViewsLabel}>
       <nav>
-        <p className="nav-heading">Smart views</p>
+        <p className="nav-heading">{strings.smartViews}</p>
         <div className="nav-list">
           {views.map((view) => (
             <button
@@ -38,9 +39,9 @@ export function Sidebar({ activeView, projects, activeProject, onView, onProject
         </div>
       </nav>
       <div>
-        <p className="nav-heading">Projects</p>
+        <p className="nav-heading">{strings.projects}</p>
         <div className="nav-list">
-          {projects.length === 0 && <span className="muted small">No projects yet</span>}
+          {projects.length === 0 && <span className="muted small">{strings.noProjectsYet}</span>}
           {projects.map((project) => (
             <button
               key={project}

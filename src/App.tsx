@@ -123,11 +123,31 @@ export default function App() {
   const tags = useMemo(() => [...new Set(tasks.flatMap((task) => task.tags))].sort(), [tasks]);
   const today = formatLocalDate(new Date());
 
+  async function runUserAction(
+    event: string,
+    failureMessage: string,
+    action: () => Promise<void>
+  ): Promise<boolean> {
+    try {
+      await action();
+      return true;
+    } catch (error) {
+      logError(event, error);
+      setToast({ message: failureMessage });
+      return false;
+    }
+  }
+
   async function saveDraft(draft: TaskDraft) {
     if (editingTask) {
       const next = updateTask(editingTask, draft);
       if (editingTask.reminderAt !== next.reminderAt) notifiedIds.current.delete(next.id);
-      await repository.putTask(next);
+      try {
+        await repository.putTask(next);
+      } catch (error) {
+        logError('task_update_failed', error);
+        throw new Error('Could not save the task to local storage.');
+      }
       setTasks((current) => current.map((task) => (task.id === next.id ? next : task)));
       setEditingTask(null);
       setToast({ message: 'Task updated.' });
@@ -135,7 +155,12 @@ export default function App() {
       return;
     }
     const task = createTask(draft, new Date(), nextOrder(tasks));
-    await repository.putTask(task);
+    try {
+      await repository.putTask(task);
+    } catch (error) {
+      logError('task_create_failed', error);
+      throw new Error('Could not save the task to local storage.');
+    }
     setTasks((current) => [...current, task]);
     setToast({ message: 'Task added.' });
     logEvent('task_created', { taskId: task.id });
@@ -144,14 +169,27 @@ export default function App() {
   async function toggleTask(task: Task) {
     if (task.status === 'completed') {
       const next = reopenTask(task);
-      await repository.putTask(next);
+      const saved = await runUserAction(
+        'task_reopen_failed',
+        'Could not reopen the task. Your local data was left unchanged.',
+        () => repository.putTask(next)
+      );
+      if (!saved) return;
       replaceLocal(next);
+      logEvent('task_reopened', { taskId: next.id });
       return;
     }
     if (task.status !== 'active') return;
     const result = completeTask(task);
-    if (result.next) await repository.putTasks([result.completed, result.next]);
-    else await repository.putTask(result.completed);
+    const saved = await runUserAction(
+      'task_complete_failed',
+      'Could not complete the task. Your local data was left unchanged.',
+      () =>
+        result.next
+          ? repository.putTasks([result.completed, result.next])
+          : repository.putTask(result.completed)
+    );
+    if (!saved) return;
     setTasks((current) => [
       ...current.map((item) => (item.id === result.completed.id ? result.completed : item)),
       ...(result.next ? [result.next] : [])
@@ -161,33 +199,57 @@ export default function App() {
         ? 'Task completed. Next occurrence created.'
         : 'Task completed.'
     });
+    logEvent('task_completed', { taskId: result.completed.id, recurring: Boolean(result.next) });
   }
 
   async function archive(task: Task) {
     const next = archiveTask(task);
-    await repository.putTask(next);
+    const saved = await runUserAction(
+      'task_archive_failed',
+      'Could not archive the task. Your local data was left unchanged.',
+      () => repository.putTask(next)
+    );
+    if (!saved) return;
     replaceLocal(next);
+    logEvent('task_archived', { taskId: next.id });
   }
 
   async function restore(task: Task) {
     const next = restoreTask(task);
-    await repository.putTask(next);
+    const saved = await runUserAction(
+      'task_restore_failed',
+      'Could not restore the task. Your local data was left unchanged.',
+      () => repository.putTask(next)
+    );
+    if (!saved) return;
     replaceLocal(next);
+    logEvent('task_restored', { taskId: next.id });
   }
 
   async function remove(task: Task) {
-    await repository.deleteTask(task.id);
+    const deleted = await runUserAction(
+      'task_delete_failed',
+      'Could not delete the task. Your local data was left unchanged.',
+      () => repository.deleteTask(task.id)
+    );
+    if (!deleted) return;
     setTasks((current) => current.filter((item) => item.id !== task.id));
     setEditingTask((current) => (current?.id === task.id ? null : current));
     setToast({
       message: 'Task deleted.',
       actionLabel: 'Undo',
       action: async () => {
-        await repository.putTask(task);
+        const restored = await runUserAction(
+          'task_delete_undo_failed',
+          'Could not undo deletion. Restore the task from a backup if needed.',
+          () => repository.putTask(task)
+        );
+        if (!restored) return;
         setTasks((current) => [...current, task]);
         setToast({ message: 'Task restored.' });
       }
     });
+    logEvent('task_deleted', { taskId: task.id });
   }
 
   async function move(task: Task, direction: -1 | 1) {
@@ -199,7 +261,12 @@ export default function App() {
     if (!target) return;
     const moved = { ...task, order: target.order, updatedAt: new Date().toISOString() };
     const swapped = { ...target, order: task.order, updatedAt: new Date().toISOString() };
-    await repository.putTasks([moved, swapped]);
+    const saved = await runUserAction(
+      'task_keyboard_reorder_failed',
+      'Could not reorder tasks. Your local data was left unchanged.',
+      () => repository.putTasks([moved, swapped])
+    );
+    if (!saved) return;
     setTasks((current) =>
       current.map((item) => (item.id === moved.id ? moved : item.id === swapped.id ? swapped : item))
     );
@@ -220,13 +287,23 @@ export default function App() {
     const activeVisibleTasks = visibleTasks.filter((task) => task.status === 'active');
     const changed = reorderVisibleTasks(activeVisibleTasks, source.id, target.id);
     if (!changed.length) return;
-    await repository.putTasks(changed);
+    const saved = await runUserAction(
+      'task_drag_reorder_failed',
+      'Could not reorder tasks. Your local data was left unchanged.',
+      () => repository.putTasks(changed)
+    );
+    if (!saved) return;
     const changedById = new Map(changed.map((task) => [task.id, task]));
     setTasks((current) => current.map((task) => changedById.get(task.id) ?? task));
   }
 
   async function changeSettings(next: AppSettings) {
-    await repository.saveSettings(next);
+    try {
+      await repository.saveSettings(next);
+    } catch (error) {
+      logError('settings_save_failed', error);
+      throw new Error('Could not save settings to local storage.');
+    }
     setSettings(next);
   }
 
@@ -284,7 +361,12 @@ export default function App() {
     ) {
       return;
     }
-    await repository.deleteAllLocalData();
+    const deleted = await runUserAction(
+      'delete_all_data_failed',
+      'Could not delete all local data. Your existing data was left in place.',
+      () => repository.deleteAllLocalData()
+    );
+    if (!deleted) return;
     notifiedIds.current.clear();
     setTasks([]);
     setSettings({ ...defaultSettings, onboardingComplete: true });

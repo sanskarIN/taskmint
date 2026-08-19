@@ -190,35 +190,63 @@ function parseCsv(input: string): string[][] {
   let row: string[] = [];
   let cell = '';
   let quoted = false;
+  let quoteClosed = false;
+
+  const finishCell = () => {
+    row.push(cell.replace(/\r$/, ''));
+    cell = '';
+    quoteClosed = false;
+  };
+
+  const finishRow = () => {
+    finishCell();
+    rows.push(row);
+    row = [];
+  };
+
   for (let index = 0; index < input.length; index += 1) {
     const char = input[index];
+    const rowNumber = rows.length + 1;
+
     if (quoted) {
       if (char === '"' && input[index + 1] === '"') {
         cell += '"';
         index += 1;
       } else if (char === '"') {
         quoted = false;
+        quoteClosed = true;
       } else {
         cell += char;
       }
-    } else if (char === '"' && cell === '') {
+      continue;
+    }
+
+    if (quoteClosed) {
+      if (char === ',') {
+        finishCell();
+      } else if (char === '\n') {
+        finishRow();
+      } else if (char === '\r' && input[index + 1] === '\n') {
+        continue;
+      } else {
+        fail('csv-invalid-quoting', { row: rowNumber });
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      if (cell !== '') fail('csv-invalid-quoting', { row: rowNumber });
       quoted = true;
     } else if (char === ',') {
-      row.push(cell);
-      cell = '';
+      finishCell();
     } else if (char === '\n') {
-      row.push(cell.replace(/\r$/, ''));
-      rows.push(row);
-      row = [];
-      cell = '';
+      finishRow();
     } else {
       cell += char;
     }
   }
+
   if (quoted) fail('csv-unterminated-quote');
-  if (cell || row.length) {
-    row.push(cell.replace(/\r$/, ''));
-    rows.push(row);
-  }
+  if (quoteClosed || cell || row.length) finishRow();
   return rows;
 }

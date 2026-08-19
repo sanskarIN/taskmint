@@ -103,13 +103,13 @@ export function makeNextOccurrence(task: Task, now = new Date()): Task | null {
     ...task,
     id: createId(),
     dueDate: formatLocalDate(nextDue),
-    reminderAt: moveReminder(task.reminderAt, task.dueDate, nextDue),
+    reminderAt: moveReminder(task.reminderAt, task.dueDate, nextDue, task.recurrence),
     status: 'active',
     completedAt: null,
     archivedAt: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
-    order: Date.now()
+    order: now.getTime()
   };
 }
 
@@ -136,7 +136,9 @@ export function filterAndSortTasks(tasks: Task[], filters: TaskFilters, now = ne
     if (filters.tag && !task.tags.includes(filters.tag)) return false;
     if (filters.priority !== 'all' && task.priority !== filters.priority) return false;
     if (!query) return true;
-    const haystack = [task.title, task.notes, task.project, ...task.tags].join(' ').toLocaleLowerCase();
+    const haystack = [task.title, task.notes, task.project, ...task.tags]
+      .join(' ')
+      .toLocaleLowerCase();
     return haystack.includes(query);
   });
 
@@ -162,26 +164,28 @@ export function calculateStats(tasks: Task[], now = new Date()): ProductivitySta
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
-  const active = tasks.filter((t) => t.status === 'active').length;
-  const completedTasks = tasks.filter((t) => t.status === 'completed');
+  const active = tasks.filter((task) => task.status === 'active').length;
+  const completedTasks = tasks.filter((task) => task.status === 'completed');
   const completed = completedTasks.length;
   const considered = active + completed;
   return {
     active,
     completed,
-    archived: tasks.filter((t) => t.status === 'archived').length,
-    overdue: tasks.filter((t) => t.status === 'active' && t.dueDate && t.dueDate < today).length,
-    dueToday: tasks.filter((t) => t.status === 'active' && t.dueDate === today).length,
+    archived: tasks.filter((task) => task.status === 'archived').length,
+    overdue: tasks.filter(
+      (task) => task.status === 'active' && Boolean(task.dueDate) && task.dueDate! < today
+    ).length,
+    dueToday: tasks.filter((task) => task.status === 'active' && task.dueDate === today).length,
     completionRate: considered === 0 ? 0 : Math.round((completed / considered) * 100),
-    completedLast7Days: completedTasks.filter((t) => {
-      if (!t.completedAt) return false;
-      return new Date(t.completedAt) >= sevenDaysAgo;
+    completedLast7Days: completedTasks.filter((task) => {
+      if (!task.completedAt) return false;
+      return new Date(task.completedAt) >= sevenDaysAgo;
     }).length
   };
 }
 
 export function isReminderDue(task: Task, now = new Date()): boolean {
-  return task.status === 'active' && !!task.reminderAt && new Date(task.reminderAt) <= now;
+  return task.status === 'active' && Boolean(task.reminderAt) && new Date(task.reminderAt!) <= now;
 }
 
 export function formatLocalDate(date: Date): string {
@@ -198,9 +202,9 @@ function matchesView(task: Task, view: SmartView, today: string): boolean {
     case 'today':
       return task.status === 'active' && task.dueDate === today;
     case 'upcoming':
-      return task.status === 'active' && !!task.dueDate && task.dueDate > today;
+      return task.status === 'active' && Boolean(task.dueDate) && task.dueDate! > today;
     case 'overdue':
-      return task.status === 'active' && !!task.dueDate && task.dueDate < today;
+      return task.status === 'active' && Boolean(task.dueDate) && task.dueDate! < today;
     case 'completed':
       return task.status === 'completed';
     case 'archived':
@@ -216,8 +220,8 @@ function normalizeTitle(value: string): string {
 }
 
 function normalizeDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return formatLocalDate(parseLocalDate(value)) === value ? value : null;
 }
 
 function normalizeDateTime(value: string | null | undefined): string | null {
@@ -240,10 +244,16 @@ function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
 }
 
-function moveReminder(reminderAt: string | null, oldDueDate: string | null, nextDue: Date): string | null {
+function moveReminder(
+  reminderAt: string | null,
+  oldDueDate: string | null,
+  nextDue: Date,
+  recurrence: Exclude<Recurrence, 'none'>
+): string | null {
   if (!reminderAt) return null;
   const reminder = new Date(reminderAt);
-  if (!oldDueDate || Number.isNaN(reminder.getTime())) return null;
+  if (Number.isNaN(reminder.getTime())) return null;
+  if (!oldDueDate) return addRecurrence(reminder, recurrence).toISOString();
   const oldDue = parseLocalDate(oldDueDate);
   const offset = reminder.getTime() - oldDue.getTime();
   return new Date(nextDue.getTime() + offset).toISOString();

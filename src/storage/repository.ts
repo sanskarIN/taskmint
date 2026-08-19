@@ -1,3 +1,4 @@
+import { fail } from '../domain/errors';
 import { normalizeDuplicateTaskOrders } from '../domain/order';
 import { validateBackup, validateSettings, validateTask } from '../domain/validation';
 import type { AppSettings, Task, TaskBackup } from '../domain/types';
@@ -25,7 +26,7 @@ export class TaskRepository {
 
   async putTasks(tasks: Task[]): Promise<void> {
     if (tasks.length === 0) return;
-    const validatedTasks = tasks.map(validateTask);
+    const validatedTasks = validateTaskBatch(tasks);
     await this.database.transaction('rw', this.database.tasks, async () => {
       await this.database.tasks.bulkPut(validatedTasks);
     });
@@ -36,7 +37,7 @@ export class TaskRepository {
   }
 
   async replaceAllTasks(tasks: Task[]): Promise<void> {
-    const validatedTasks = tasks.map(validateTask);
+    const validatedTasks = validateTaskBatch(tasks);
     await this.database.transaction('rw', this.database.tasks, async () => {
       await this.database.tasks.clear();
       if (validatedTasks.length) await this.database.tasks.bulkPut(validatedTasks);
@@ -67,6 +68,16 @@ export class TaskRepository {
       await this.database.settings.clear();
     });
   }
+}
+
+function validateTaskBatch(tasks: Task[]): Task[] {
+  const validatedTasks = tasks.map(validateTask);
+  const seenIds = new Set<string>();
+  for (const task of validatedTasks) {
+    if (seenIds.has(task.id)) fail('task-batch-duplicate-id', { id: task.id });
+    seenIds.add(task.id);
+  }
+  return validatedTasks;
 }
 
 export const repository = new TaskRepository();

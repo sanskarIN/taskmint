@@ -1,3 +1,4 @@
+import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
 import type {
   ProductivityStats,
@@ -16,7 +17,7 @@ const priorityRank: Record<Task['priority'], number> = {
 };
 
 export function createTask(draft: TaskDraft, now = new Date(), order = Date.now()): Task {
-  if (!Number.isFinite(order)) throw new Error('Task order must be a finite number.');
+  if (!Number.isFinite(order)) fail('task-order-invalid');
   const iso = now.toISOString();
   return {
     id: createId(),
@@ -238,25 +239,21 @@ function matchesView(task: Task, view: SmartView, today: string): boolean {
 
 function normalizeTitle(value: string): string {
   const title = value.replace(/\s+/g, ' ').trim();
-  if (!title) throw new Error('Task title is required.');
-  if (title.length > TASK_LIMITS.title) {
-    throw new Error(`Task title must be ${TASK_LIMITS.title} characters or fewer.`);
-  }
+  if (!title) fail('task-title-required');
+  if (title.length > TASK_LIMITS.title) fail('task-title-too-long', { max: TASK_LIMITS.title });
   return title;
 }
 
 function normalizeNotes(value: string | undefined): string {
   const notes = (value ?? '').trim();
-  if (notes.length > TASK_LIMITS.notes) {
-    throw new Error(`Task notes must be ${TASK_LIMITS.notes} characters or fewer.`);
-  }
+  if (notes.length > TASK_LIMITS.notes) fail('task-notes-too-long', { max: TASK_LIMITS.notes });
   return notes;
 }
 
 function normalizeProject(value: string | undefined): string {
   const project = (value ?? '').trim();
   if (project.length > TASK_LIMITS.project) {
-    throw new Error(`Project must be ${TASK_LIMITS.project} characters or fewer.`);
+    fail('task-project-too-long', { max: TASK_LIMITS.project });
   }
   return project;
 }
@@ -264,7 +261,7 @@ function normalizeProject(value: string | undefined): string {
 function normalizeDate(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || formatLocalDate(parseLocalDate(value)) !== value) {
-    throw new Error('Due date is invalid.');
+    fail('task-due-date-invalid');
   }
   return value;
 }
@@ -272,21 +269,17 @@ function normalizeDate(value: string | null | undefined): string | null {
 function normalizeDateTime(value: string | null | undefined): string | null {
   if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) throw new Error('Reminder date/time is invalid.');
+  if (Number.isNaN(date.getTime())) fail('task-reminder-invalid');
   return date.toISOString();
 }
 
 function normalizeTags(tags: string[]): string[] {
   const normalized = tags.map((tag) => tag.trim().toLocaleLowerCase()).filter(Boolean);
   for (const tag of normalized) {
-    if (tag.length > TASK_LIMITS.tag) {
-      throw new Error(`Each tag must be ${TASK_LIMITS.tag} characters or fewer.`);
-    }
+    if (tag.length > TASK_LIMITS.tag) fail('task-tag-too-long', { max: TASK_LIMITS.tag });
   }
   const unique = [...new Set(normalized)];
-  if (unique.length > TASK_LIMITS.tags) {
-    throw new Error(`A task can have at most ${TASK_LIMITS.tags} tags.`);
-  }
+  if (unique.length > TASK_LIMITS.tags) fail('task-tags-too-many', { max: TASK_LIMITS.tags });
   return unique;
 }
 

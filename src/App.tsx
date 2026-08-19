@@ -23,6 +23,7 @@ import {
 } from './domain/task';
 import type { AppSettings, SmartView, Task, TaskDraft, TaskFilters } from './domain/types';
 import { strings } from './i18n/en';
+import { userErrorMessage } from './i18n/errors';
 import { defaultSettings, repository } from './storage/repository';
 import { csvToTasks, downloadText, parseBackup, serializeBackup, tasksToCsv } from './utils/export';
 import { isEditableTarget, resolveGlobalShortcut } from './utils/keyboard';
@@ -355,7 +356,7 @@ export default function App() {
       setToast({ message: strings.restoredTasks(backup.tasks.length) });
     } catch (error) {
       logError('json_import_failed', error);
-      setToast({ message: error instanceof Error ? error.message : strings.importBackupError });
+      setToast({ message: userErrorMessage(error, strings.importBackupError) });
     }
   }
 
@@ -367,7 +368,7 @@ export default function App() {
       setToast({ message: strings.importedTasks(imported.length) });
     } catch (error) {
       logError('csv_import_failed', error);
-      setToast({ message: error instanceof Error ? error.message : strings.importCsvError });
+      setToast({ message: userErrorMessage(error, strings.importCsvError) });
     }
   }
 

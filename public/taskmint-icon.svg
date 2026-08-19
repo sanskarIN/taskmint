@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">TaskMint logo</title>
+  <rect width="512" height="512" rx="112" fill="#0f766e"/>
+  <path d="M143 144h226a28 28 0 0 1 28 28v168a28 28 0 0 1-28 28H143a28 28 0 0 1-28-28V172a28 28 0 0 1 28-28Z" fill="#f0fdfa"/>
+  <path d="m171 253 49 49 119-119" fill="none" stroke="#0f766e" stroke-linecap="round" stroke-linejoin="round" stroke-width="34"/>
+</svg>

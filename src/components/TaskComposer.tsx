@@ -58,7 +58,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
       });
       reset();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save the task.');
+      setError(cause instanceof Error ? cause.message : strings.taskSavedError);
     }
   }
 
@@ -88,7 +88,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
     >
       <div className="composer-main">
         <label className="sr-only" htmlFor={`${formId}-title`}>
-          Task title
+          {strings.taskTitle}
         </label>
         <input
           id={`${formId}-title`}
@@ -96,7 +96,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           onFocus={() => setExpanded(true)}
-          placeholder="What needs to be done?"
+          placeholder={strings.taskTitlePlaceholder}
           maxLength={TASK_LIMITS.title}
           required
           autoComplete="off"
@@ -109,7 +109,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
       {expanded && (
         <div className="composer-details">
           <label>
-            Notes
+            {strings.notes}
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
@@ -118,23 +118,23 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
             />
           </label>
           <label>
-            Priority
+            {strings.priority}
             <select
               value={priority}
               onChange={(event) => setPriority(event.target.value as TaskDraft['priority'])}
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="low">{strings.priorityLow}</option>
+              <option value="medium">{strings.priorityMedium}</option>
+              <option value="high">{strings.priorityHigh}</option>
+              <option value="urgent">{strings.priorityUrgent}</option>
             </select>
           </label>
           <label>
-            Due date
+            {strings.dueDate}
             <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
           </label>
           <label>
-            Reminder
+            {strings.reminder}
             <input
               type="datetime-local"
               value={reminderAt}
@@ -142,36 +142,36 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
             />
           </label>
           <label>
-            Project
+            {strings.project}
             <input
               value={project}
               onChange={(event) => setProject(event.target.value)}
               maxLength={TASK_LIMITS.project}
-              placeholder="e.g. School"
+              placeholder={strings.projectPlaceholder}
             />
           </label>
           <label>
-            Tags
+            {strings.tags}
             <input
               value={tags}
               onChange={(event) => setTags(event.target.value)}
               aria-describedby={`${formId}-tags-help`}
-              placeholder="study, important"
+              placeholder={strings.tagsPlaceholder}
             />
             <span id={`${formId}-tags-help`} className="field-help">
-              Up to {TASK_LIMITS.tags} comma-separated tags; {TASK_LIMITS.tag} characters each.
+              {strings.tagsHelp(TASK_LIMITS.tags, TASK_LIMITS.tag)}
             </span>
           </label>
           <label>
-            Repeat
+            {strings.repeat}
             <select
               value={recurrence}
               onChange={(event) => setRecurrence(event.target.value as Recurrence)}
             >
-              <option value="none">Never</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="none">{strings.recurrenceNever}</option>
+              <option value="daily">{strings.recurrenceDaily}</option>
+              <option value="weekly">{strings.recurrenceWeekly}</option>
+              <option value="monthly">{strings.recurrenceMonthly}</option>
             </select>
           </label>
           {editingTask && (

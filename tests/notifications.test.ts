@@ -55,11 +55,7 @@ describe('browser reminders', () => {
       1000
     );
 
-    expect(() =>
-      notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'))
-    ).not.toThrow();
-    expect(notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'))).not.toContain(
-      task.id
-    );
+    const notified = notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'));
+    expect(notified.has(task.id)).toBe(false);
   });
 });

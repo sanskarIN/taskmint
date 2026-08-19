@@ -203,7 +203,8 @@ export function calculateStats(tasks: Task[], now = new Date()): ProductivitySta
     completionRate: considered === 0 ? 0 : Math.round((completed / considered) * 100),
     completedLast7Days: completedTasks.filter((task) => {
       if (!task.completedAt) return false;
-      return new Date(task.completedAt) >= sevenDaysAgo;
+      const completedAt = new Date(task.completedAt);
+      return completedAt >= sevenDaysAgo && completedAt <= now;
     }).length
   };
 }

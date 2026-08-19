@@ -2,16 +2,16 @@
 
 Thank you for improving TaskMint. Contributions should preserve the project's local-first, privacy-friendly, accessible, predictable design rather than optimizing only for feature count.
 
-Read the documentation index at `docs/README.md` before a large change.
+Start with `docs/README.md` for the documentation map and `docs/file-index.md` for the complete tracked-file inventory.
 
 ## 1. Ground rules
 
 - Keep TaskMint offline-first for ordinary task operations.
 - Preserve user ownership of local/exported data.
-- Do not add tracking, accounts, remote task processing, or cloud synchronization without an explicit architecture/privacy/security review.
+- Do not add tracking, accounts, remote task processing, or cloud synchronization without explicit architecture/privacy/security review.
 - Never commit real credentials, private user task data, or personal backup files.
-- Prefer small focused changes with regression tests over broad rewrites.
-- Keep domain rules outside React event handlers when practical.
+- Prefer focused changes with regressions over broad rewrites.
+- Keep domain rules outside React handlers where practical.
 - Route persistence through `TaskRepository`.
 - Preserve validation at import, repository write, and repository read boundaries.
 - Preserve transactional multi-task writes.
@@ -19,22 +19,25 @@ Read the documentation index at `docs/README.md` before a large change.
 - Put visible product copy in the i18n layer.
 - Keep shared limits/manual-order/date-time rules centralized.
 - Keep UI keyboard accessible and usable at narrow widths/zoom.
-- Preserve production CSP; dev-only HMR relaxations must remain development-only.
+- Preserve production CSP; dev-only HMR relaxations remain development-only.
 - Do not fabricate lockfiles, screenshots, test evidence, or release status.
+- Do not add a tracked file without updating the complete documentation inventory.
 
 ## 2. Before starting
 
-Read the areas relevant to your change:
+Read the areas relevant to the change:
 
-- `docs/repository-reference.md` — file ownership/coupling map.
+- `docs/file-index.md` — exact tracked-path inventory.
+- `docs/repository-reference.md` — ownership/coupling map.
 - `docs/architecture.md` — runtime boundaries.
-- `docs/data-model.md` — persisted/imported data contracts.
-- `docs/development.md` — coding rules.
-- `docs/testing.md` / `docs/test-matrix.md` — coverage strategy.
+- `docs/data-model.md` — persisted/imported contracts.
+- `docs/development.md` — implementation rules.
+- `docs/testing.md` / `docs/test-matrix.md` — coverage strategy/current tests.
 - `docs/accessibility.md` — UI/accessibility expectations.
+- `docs/operations.md` — CI/release repository operations.
 - `SECURITY.md` / `PRIVACY.md` — sensitive changes.
 
-For a significant architectural change, also review `docs/adr/`.
+For a significant architectural change, review/add an ADR under `docs/adr/`.
 
 ## 3. Local workflow
 
@@ -45,13 +48,15 @@ For a significant architectural change, also review `docs/adr/`.
 5. Make the smallest coherent implementation.
 6. Add regression coverage.
 7. Update documentation coupled to the behavior.
-8. Run dependency-free guards early.
-9. Run `npm run check`.
-10. Run browser E2E when browser/persistence/accessibility/PWA behavior changed.
-11. Run audit for dependency/release work.
-12. Commit focused changes.
-13. Open a PR using the repository template.
-14. Require fresh exact-head hosted checks after every pushed commit.
+8. Update `docs/file-index.md` for any tracked file add/remove/rename.
+9. Update `docs/test-matrix.md` for any test/E2E/benchmark/shared-test-setup path change.
+10. Run dependency-free repository guards early.
+11. Run `npm run check`.
+12. Run browser E2E when browser/persistence/accessibility/PWA behavior changed.
+13. Run audit for dependency/release work.
+14. Commit focused changes.
+15. Open a PR using the repository template.
+16. Require fresh exact-head hosted checks after every pushed commit.
 
 ## 4. Install and run
 
@@ -60,7 +65,7 @@ npm install
 npm run dev
 ```
 
-Production build:
+Production build/preview:
 
 ```bash
 npm run build
@@ -82,6 +87,7 @@ Individual commands:
 ```bash
 npm run format:check
 npm run docs:check
+npm run docs:inventory
 npm run secrets:check
 npm run lint
 npm run typecheck
@@ -108,7 +114,17 @@ Benchmark when performance is relevant:
 npm run bench
 ```
 
-## 6. Commit style
+## 6. Documentation completeness gate
+
+`npm run docs:inventory` uses `git ls-files` and enforces three repository contracts:
+
+1. every tracked file path appears in `docs/file-index.md`;
+2. `docs/repository-reference.md` retains the required subsystem ownership sections;
+3. every tracked `tests/`, `e2e/`, `bench/`, and `src/test/setup.ts` path appears in `docs/test-matrix.md`.
+
+If this check fails after adding a file, document the file rather than suppressing the check.
+
+## 7. Commit style
 
 Conventional Commits are preferred:
 
@@ -122,11 +138,9 @@ Conventional Commits are preferred:
 - `ci:`
 - `chore:`
 
-Keep commits single-purpose when practical.
+Keep commits single-purpose when practical. Do not split inseparable correctness changes just to inflate commit count, and do not hide unrelated work in one giant commit.
 
-Do not split one inseparable correctness change merely to inflate commit count. Conversely, do not hide unrelated changes inside one giant commit.
-
-## 7. Pull request expectations
+## 8. Pull request expectations
 
 A good PR explains:
 
@@ -135,14 +149,15 @@ A good PR explains:
 - changed behavior;
 - tests added/updated;
 - documentation updated;
+- new/renamed tracked files and inventory update;
 - persistence/data migration/import/export impact;
 - accessibility impact;
 - privacy/security impact;
-- known limitations or manual verification needed.
+- known limitations/manual verification.
 
 Do not claim checks passed unless they actually did for the stated SHA/environment.
 
-## 8. Where to implement changes
+## 9. Where to implement changes
 
 ### Task rules
 
@@ -194,7 +209,7 @@ Use `src/utils/logger.ts`; do not log arbitrary user strings/raw exception messa
 
 Use the App-wide exclusive mutation gate rather than adding an independent unguarded task write path.
 
-## 9. Persistence/data safety expectations
+## 10. Persistence/data safety expectations
 
 When a change writes tasks/settings:
 
@@ -208,7 +223,7 @@ When a change writes tasks/settings:
 
 For destructive operations such as restore, validate/preflight before clearing current data.
 
-## 10. Data model changes
+## 11. Data model changes
 
 If adding/changing a persisted field:
 
@@ -218,16 +233,16 @@ If adding/changing a persisted field:
 4. update Dexie schema/migration when needed;
 5. update repository behavior;
 6. update JSON backup semantics/version policy;
-7. update CSV only when field belongs in human interchange;
+7. update CSV only when the field belongs in human interchange;
 8. add unit/repository/migration/import/export/property tests;
-9. update `docs/data-model.md` and architecture docs;
+9. update `docs/data-model.md`, architecture, and file/test inventories;
 10. consider a new ADR for incompatible changes.
 
 Never silently reinterpret previously valid persisted/exported user data.
 
-## 11. CSV compatibility changes
+## 12. CSV compatibility changes
 
-Current marked CSV encoding is `safe-text-v1`.
+Current marked encoding is `safe-text-v1`.
 
 Do not change its meaning incompatibly in place.
 
@@ -243,13 +258,13 @@ Keep:
 
 If incompatible marked semantics are needed, define a new explicit encoding version and compatibility tests.
 
-## 12. Async UI changes
+## 13. Async UI changes
 
 React disabled state alone may not prevent same-tick duplicate events.
 
 For persistence-sensitive actions:
 
-- consider a synchronous ref lock;
+- consider/use a synchronous ref lock;
 - expose `aria-busy`/disabled state;
 - release in `finally`;
 - keep failure retryable;
@@ -257,9 +272,9 @@ For persistence-sensitive actions:
 
 Task mutations that can race different cards should use the App-wide gate.
 
-## 13. Accessibility review
+## 14. Accessibility review
 
-For UI changes manually/testably review:
+For UI changes review:
 
 - keyboard navigation;
 - visible focus;
@@ -278,11 +293,11 @@ Drag-and-drop must have a keyboard alternative.
 
 See `docs/accessibility.md`.
 
-## 14. Security/privacy review
+## 15. Security/privacy review
 
-A change requires extra review if it introduces/changes:
+Extra review is required for changes involving:
 
-- remote network requests involving task/user data;
+- remote requests involving task/user data;
 - authentication/accounts;
 - analytics/telemetry;
 - crash reporting;
@@ -297,9 +312,9 @@ A change requires extra review if it introduces/changes:
 
 Update `SECURITY.md` / `PRIVACY.md` when the documented model changes.
 
-## 15. Test selection
+## 16. Test selection
 
-Use the closest test layer:
+Use the closest layer:
 
 - domain -> unit;
 - parser -> unit/property;
@@ -307,11 +322,11 @@ Use the closest test layer:
 - cross-component concurrency -> App/integration;
 - repository -> repository harness;
 - real IndexedDB/migration/offline/focus -> Playwright;
-- scripts/config -> direct configuration/fixture tests.
+- scripts/config -> direct configuration/fixture tests where practical.
 
 See `docs/test-matrix.md` for every current test file.
 
-## 16. Documentation requirement
+## 17. Documentation requirement
 
 Update documentation whenever behavior changes.
 
@@ -323,24 +338,28 @@ Common coupling:
 - contributor rules -> `docs/development.md`;
 - tests -> `docs/testing.md` / `docs/test-matrix.md`;
 - CI/release -> `docs/operations.md` / `docs/release.md`;
-- file responsibility -> `docs/repository-reference.md`;
+- file paths -> `docs/file-index.md`;
+- file responsibilities -> `docs/repository-reference.md`;
 - notable change -> `CHANGELOG.md`;
 - current continuation state -> `what_changed.md`.
 
-Run `npm run docs:check`.
+Run both `npm run docs:check` and `npm run docs:inventory`.
 
-## 17. New files/directories
+## 18. New files/directories
 
-When adding a file:
+When adding a tracked file:
 
-- document it in `docs/repository-reference.md`;
-- if it is a test, update `docs/test-matrix.md`;
+- add its exact path to `docs/file-index.md`;
+- document responsibility/coupling in `docs/repository-reference.md` when meaningful;
+- if it is a test/E2E/benchmark/shared test setup file, update `docs/test-matrix.md`;
 - ensure TypeScript/ESLint/build includes it if appropriate;
 - ensure format/secrets/docs guards cover it if appropriate;
 - ensure `.gitignore` does not unintentionally exclude it;
 - add docs links only to real committed targets.
 
-## 18. Dependencies
+When removing/renaming a file, remove/update the old inventory/reference entries in the same change.
+
+## 19. Dependencies
 
 Top-level dependencies are exact-version pinned.
 
@@ -355,17 +374,17 @@ Review dependency updates for:
 
 Dependabot proposals still require tests/review.
 
-Do not fabricate `package-lock.json`. It must be generated by npm and reviewed before release.
+Do not fabricate `package-lock.json`; npm must generate and maintain it once release dependency resolution is available.
 
-## 19. PWA changes
+## 20. PWA changes
 
 Preserve prompt-mode updates unless the product gains durable tested draft restoration that makes automatic reload safe.
 
 Test PWA behavior using production build/preview, not only development HMR.
 
-Update `tests/pwa-config.test.ts`, component tests, docs, and manual release checklist when update behavior changes.
+Update PWA config/component tests, docs, and manual release checklist when behavior changes.
 
-## 20. Performance changes
+## 21. Performance changes
 
 Measure first.
 
@@ -375,27 +394,27 @@ Do not merge a micro-optimization that complicates correctness/data safety witho
 
 Run benchmark separately from correctness tests.
 
-## 21. Security reports
+## 22. Security reports
 
 Do not open a public issue for a vulnerability that could put users at risk.
 
-Follow `SECURITY.md`.
+Follow `SECURITY.md` and do not include other users' task data or real secrets in reproductions.
 
-Do not include other users' task data or real secrets in reproductions.
+## 23. Repository governance
 
-## 22. Repository governance
+See `docs/github.md` for branch protection, required checks, merge policy, templates, Dependabot, Actions permissions, and release/tag expectations.
 
-See `docs/github.md` for branch protection, required checks, merge policy, issue templates, Dependabot, Actions permissions, and release/tag expectations.
-
-## 23. Definition of done
+## 24. Definition of done
 
 A change is complete when, as applicable:
 
 - implementation is coherent;
-- data/persistence invariants preserved;
-- regression tests added;
-- accessibility/privacy/security considered;
-- documentation updated;
+- data/persistence invariants are preserved;
+- regression tests are added;
+- accessibility/privacy/security are considered;
+- behavioral docs are updated;
+- `file-index.md` and `test-matrix.md` match the tracked tree;
+- `docs:check` and `docs:inventory` pass;
 - local quality gates run where possible;
 - browser tests run when required;
 - PR exact-head hosted checks succeed before merge according to repository policy.

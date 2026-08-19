@@ -149,8 +149,8 @@ export default function App() {
     }
     if (task.status !== 'active') return;
     const result = completeTask(task);
-    await repository.putTask(result.completed);
-    if (result.next) await repository.putTask(result.next);
+    if (result.next) await repository.putTasks([result.completed, result.next]);
+    else await repository.putTask(result.completed);
     setTasks((current) => [
       ...current.map((item) => (item.id === result.completed.id ? result.completed : item)),
       ...(result.next ? [result.next] : [])

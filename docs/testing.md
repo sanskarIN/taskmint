@@ -1,6 +1,6 @@
 # Testing
 
-TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, and repository hygiene as release-critical paths.
+TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, persistence atomicity, and repository hygiene as release-critical paths.
 
 ## Unit/domain
 
@@ -25,6 +25,10 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 
 `tests/security-config.test.ts` locks the committed production CSP to self-restricted scripts/styles/connections and rejects accidental development WebSocket or inline-style allowances in the built HTML source.
 
+`tests/repository.test.ts` verifies that multi-task writes are routed through a read-write transaction, bulk failures propagate, and empty batches do not open unnecessary transactions.
+
+`tests/release-guard.test.ts` executes the dependency-free release guard against isolated temporary fixtures and verifies exact tag/version matching plus fail-closed lockfile behavior.
+
 ## Data portability and generated properties
 
 `tests/export.test.ts` covers:
@@ -37,6 +41,8 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - CSV quoting and multiline round trips
 - lossless structured tag encoding, including tags containing the legacy `|` separator
 - backward-compatible legacy pipe-separated tag imports
+- reversible spreadsheet-formula neutralization for title/notes/project fields
+- leading-apostrophe round trips and unchanged legacy CSV semantics
 - deterministic stress round trips with commas, quotes, CR/LF content, Unicode, tags, projects, priorities, and recurrence
 - UTF-8 BOM headers
 - malformed enum/date rejection
@@ -83,11 +89,12 @@ Benchmark timings are diagnostic rather than CI pass/fail thresholds because run
 - `npm run format:check` rejects CRLF drift, missing final newlines, and trailing whitespace across tracked text paths, including `bench/`.
 - `npm run docs:check` resolves repository-relative Markdown links and rejects links that escape the repository or point to missing local targets.
 - `npm run secrets:check` scans tracked text paths, including benchmarks, for common private-key and credential-token patterns without sending repository content to a third-party service.
+- `npm run release:check -- vX.Y.Z` verifies exact tag/package-version alignment and requires a committed `package-lock.json` before a release can proceed.
 
-These checks intentionally require only Node.js and can run before npm dependencies are available.
+The first three checks intentionally require only Node.js and can run before npm dependencies are available. The release guard also uses only Node.js, but it is intentionally expected to fail until the real npm lockfile is committed.
 
 ## CI gates
 
-Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
+Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component/property tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. CI and E2E use `npm ci` automatically once a lockfile exists and otherwise retain the pre-release fallback install so development verification can continue before the first lockfile is generated. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
 
-Tagged releases rerun the combined local quality suite, high-severity dependency audit, and Chromium E2E before creating the release artifact and checksum.
+Tagged releases have no fallback: they require the release guard, install only with `npm ci`, rerun the combined quality suite, high-severity dependency audit, and Chromium E2E, then create the release artifact and checksum.

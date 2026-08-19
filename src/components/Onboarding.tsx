@@ -14,7 +14,7 @@ export function Onboarding({ onComplete }: Props) {
     try {
       await onComplete();
     } catch {
-      setError('Could not save the onboarding setting. Please try again.');
+      setError(strings.onboardingSaveError);
     }
   }
 
@@ -34,13 +34,13 @@ export function Onboarding({ onComplete }: Props) {
         onKeyDown={keepFocusInside}
       >
         <img className="onboarding-logo" src="/taskmint-icon.svg" alt="" width="72" height="72" />
-        <p className="eyebrow">Welcome</p>
-        <h2 id="onboarding-title">A calmer way to keep track.</h2>
+        <p className="eyebrow">{strings.welcome}</p>
+        <h2 id="onboarding-title">{strings.onboardingTitle}</h2>
         <p>{strings.tagline}</p>
         <ul className="feature-list">
-          <li>Works offline and stores tasks locally.</li>
-          <li>Organize with projects, tags, priorities, due dates, and recurring tasks.</li>
-          <li>Export your data whenever you want.</li>
+          <li>{strings.onboardingOffline}</li>
+          <li>{strings.onboardingOrganize}</li>
+          <li>{strings.onboardingExport}</li>
         </ul>
         <button
           ref={startButton}
@@ -49,14 +49,14 @@ export function Onboarding({ onComplete }: Props) {
           onClick={start}
           autoFocus
         >
-          Start using TaskMint
+          {strings.onboardingStart}
         </button>
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
-        <p className="muted small">No account required.</p>
+        <p className="muted small">{strings.onboardingNoAccount}</p>
       </section>
     </div>
   );

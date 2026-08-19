@@ -56,6 +56,7 @@ The project follows Semantic Versioning for tagged releases.
 - Reversibly neutralize spreadsheet-formula prefixes, including whitespace-prefixed formulas, in exported task titles, notes, and project fields without altering legacy CSV import semantics.
 - Prevent arbitrary infrastructure exception messages from being wrapped into known CSV validation errors.
 - Preserve original CSV record numbers when blank records are skipped so row-aware validation errors still point to the actual source record.
+- Count only nonblank CSV records toward the task-count import limit while retaining the independent file-size guard.
 - Rebase CSV-import manual-order values after the existing maximum order and allocate imported rows contiguously, preventing valid merges from introducing duplicate order slots.
 - Wrap malformed JSON parsing in a stable safe TaskMint backup error rather than exposing engine-specific parser text.
 - Preserve recurring reminder schedules for recurring tasks that do not have a due date.

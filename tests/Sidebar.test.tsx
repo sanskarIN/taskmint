@@ -44,4 +44,20 @@ describe('Sidebar', () => {
     fireEvent.click(docs);
     expect(onProject).toHaveBeenCalledWith('Docs');
   });
+
+  it('keeps smart-view and project selectors inside the navigation landmark', () => {
+    render(
+      <Sidebar
+        activeView="inbox"
+        projects={['TaskMint']}
+        activeProject=""
+        onView={vi.fn()}
+        onProject={vi.fn()}
+      />
+    );
+
+    const navigation = screen.getByRole('navigation');
+    expect(navigation.contains(screen.getByRole('button', { name: strings.viewInbox }))).toBe(true);
+    expect(navigation.contains(screen.getByRole('button', { name: 'TaskMint' }))).toBe(true);
+  });
 });

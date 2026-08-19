@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { strings } from '../i18n/en';
 import { logError } from '../utils/logger';
+import './PwaUpdatePrompt.css';
 
 export function PwaUpdatePrompt() {
   const [dismissed, setDismissed] = useState(false);

@@ -1,3 +1,4 @@
+import { fail } from '../domain/errors';
 import { TASK_LIMITS } from '../domain/limits';
 import { createTask } from '../domain/task';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from '../domain/types';
@@ -34,8 +35,14 @@ export function serializeBackup(tasks: Task[], settings?: AppSettings): string {
 }
 
 export function parseBackup(text: string): TaskBackup {
-  if (text.length > TASK_LIMITS.importBytes) throw new Error('Backup file is too large.');
-  return validateBackup(JSON.parse(text) as unknown);
+  if (text.length > TASK_LIMITS.importBytes) fail('backup-file-too-large');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    fail('backup-json-invalid');
+  }
+  return validateBackup(parsed);
 }
 
 export function tasksToCsv(tasks: Task[]): string {
@@ -61,19 +68,22 @@ export function tasksToCsv(tasks: Task[]): string {
 }
 
 export function csvToTasks(csv: string): Task[] {
-  if (csv.length > TASK_LIMITS.importBytes) throw new Error('CSV file is too large.');
+  if (csv.length > TASK_LIMITS.importBytes) fail('csv-file-too-large');
   const rows = parseCsv(csv);
   if (rows.length === 0) return [];
-  if (rows.length - 1 > TASK_LIMITS.backupTasks) throw new Error('CSV contains too many tasks.');
+  if (rows.length - 1 > TASK_LIMITS.backupTasks) fail('csv-too-many-tasks');
 
-  const headers = rows[0]?.map((header, index) => {
-    const trimmed = header.trim();
-    return index === 0 ? trimmed.replace(/^\uFEFF/, '') : trimmed;
-  }) ?? [];
+  const headers =
+    rows[0]?.map((header, index) => {
+      const trimmed = header.trim();
+      return index === 0 ? trimmed.replace(/^\uFEFF/, '') : trimmed;
+    }) ?? [];
   const missing = csvHeaders.filter((header) => !headers.includes(header));
-  if (missing.length) throw new Error(`CSV is missing columns: ${missing.join(', ')}`);
+  if (missing.length) fail('csv-missing-columns', { columns: missing });
   const duplicates = headers.filter((header, index) => headers.indexOf(header) !== index);
-  if (duplicates.length) throw new Error(`CSV contains duplicate columns: ${[...new Set(duplicates)].join(', ')}`);
+  if (duplicates.length) {
+    fail('csv-duplicate-columns', { columns: [...new Set(duplicates)] });
+  }
 
   return rows
     .slice(1)
@@ -99,9 +109,9 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
   const recurrence = value('recurrence') as Recurrence;
   const status = value('status') as TaskStatus;
 
-  if (!priorities.has(priority)) throw new Error(`CSV row ${rowNumber} has an invalid priority.`);
-  if (!recurrences.has(recurrence)) throw new Error(`CSV row ${rowNumber} has an invalid recurrence.`);
-  if (!statuses.has(status)) throw new Error(`CSV row ${rowNumber} has an invalid status.`);
+  if (!priorities.has(priority)) fail('csv-invalid-priority', { row: rowNumber });
+  if (!recurrences.has(recurrence)) fail('csv-invalid-recurrence', { row: rowNumber });
+  if (!statuses.has(status)) fail('csv-invalid-status', { row: rowNumber });
 
   try {
     const now = new Date();
@@ -128,8 +138,8 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
     }
     return task;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid task data.';
-    throw new Error(`CSV row ${rowNumber}: ${message}`);
+    const causeMessage = error instanceof Error ? error.message : 'Invalid task data.';
+    fail('csv-row-invalid', { row: rowNumber, causeMessage });
   }
 }
 
@@ -167,7 +177,7 @@ function parseCsv(input: string): string[][] {
       cell += char;
     }
   }
-  if (quoted) throw new Error('CSV contains an unterminated quoted field.');
+  if (quoted) fail('csv-unterminated-quote');
   if (cell || row.length) {
     row.push(cell.replace(/\r$/, ''));
     rows.push(row);

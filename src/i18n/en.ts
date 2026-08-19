@@ -149,6 +149,6 @@ export const strings = {
   deleteAllError: 'Could not delete all local data. Your existing data was left in place.',
   deleteAllSuccess: 'All local TaskMint data was deleted.',
   taskCount: (count: number) => `${count} ${count === 1 ? 'task' : 'tasks'}`,
-  showMoreTasks: (count: number) => `Show ${Math.min(count, 100)} more tasks`,
+  showMoreTasks: (remaining: number) => `Show more tasks (${remaining} remaining)`,
   importTooLarge: 'Import file is too large.'
 } as const;

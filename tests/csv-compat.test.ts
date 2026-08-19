@@ -31,4 +31,13 @@ describe('CSV encoding compatibility', () => {
 
     expect(() => csvToTasks(csv)).toThrow(/row 2.*unsupported TaskMint encoding/i);
   });
+
+  it('keeps the original CSV record number after blank records are skipped', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      ',,,,,,,,\r\n' +
+      'Broken priority,,impossible,,,,,none,active';
+
+    expect(() => csvToTasks(csv)).toThrow(/row 3.*invalid priority/i);
+  });
 });

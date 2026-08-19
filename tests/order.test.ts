@@ -30,6 +30,12 @@ describe('task order allocation', () => {
     expect(nextTaskOrder([{ order: 10 }, { order: 50 }, { order: 20 }], 25)).toBe(75);
   });
 
+  it('rejects unsafe order arithmetic before it can overflow or lose precision', () => {
+    expect(() => nextTaskOrder([{ order: Number.MAX_SAFE_INTEGER }])).toThrow(/safe integer/i);
+    expect(() => nextTaskOrder([], 1.5)).toThrow(/safe integer/i);
+    expect(() => createTask({ title: 'Unsafe order' }, new Date(), 1.5)).toThrow(/safe integer/i);
+  });
+
   it('breaks equal order values deterministically by task id', () => {
     expect(compareTaskOrder({ id: 'b', order: 1000 }, { id: 'a', order: 1000 })).toBeGreaterThan(0);
     expect(compareTaskOrder({ id: 'a', order: 1000 }, { id: 'b', order: 1000 })).toBeLessThan(0);
@@ -61,7 +67,10 @@ describe('task order allocation', () => {
   });
 
   it('leaves already unique task orders untouched', () => {
-    const tasks = [createTask({ title: 'One' }, new Date(), 1000), createTask({ title: 'Two' }, new Date(), 2000)];
+    const tasks = [
+      createTask({ title: 'One' }, new Date('2026-08-19T06:00:00.000Z'), 1000),
+      createTask({ title: 'Two' }, new Date('2026-08-19T06:00:01.000Z'), 2000)
+    ];
     expect(normalizeDuplicateTaskOrders(tasks)).toBe(tasks);
   });
 });

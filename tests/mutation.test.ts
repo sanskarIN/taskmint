@@ -53,4 +53,17 @@ describe('runExclusiveMutation', () => {
     expect(lock.current).toBe(false);
     expect(busy.mock.calls).toEqual([[true], [false]]);
   });
+
+  it('releases the lock even if entering the busy state throws', async () => {
+    const lock = { current: false };
+    const action = vi.fn().mockResolvedValue(undefined);
+    const busy = vi.fn((value: boolean) => {
+      if (value) throw new Error('simulated busy-state failure');
+    });
+
+    await expect(runExclusiveMutation(lock, busy, action)).rejects.toThrow(/busy-state failure/i);
+    expect(action).not.toHaveBeenCalled();
+    expect(lock.current).toBe(false);
+    expect(busy.mock.calls).toEqual([[true], [false]]);
+  });
 });

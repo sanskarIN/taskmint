@@ -14,17 +14,21 @@ Do not publish secrets, private task content, exploit details that could put use
 
 - No required backend, authentication system, or production API credentials.
 - Local IndexedDB storage uses explicit versioned migrations.
+- Multi-task persistence uses an explicit Dexie read-write transaction so bulk failures abort the batch instead of leaving a partially written task set.
 - JSON and CSV imports enforce shared file-size/task-count boundaries.
 - JSON restore rejects malformed/duplicate task identifiers, invalid enums, impossible dates, malformed timestamps, invalid status/timestamp combinations, invalid numeric order values, and oversized task fields before replacing local data.
-- CSV import requires the complete expected header set, rejects duplicate headers, validates enum/date/task constraints row by row, and rejects unterminated quoted fields rather than silently coercing malformed input.
+- CSV import requires the complete expected header set, rejects duplicate headers, validates enum/date/task constraints row by row, rejects malformed structured tag payloads, and rejects unterminated quoted fields rather than silently coercing malformed input.
+- New CSV exports encode tags with an explicit `json:` structured representation so valid tag text containing the legacy `|` separator round-trips losslessly; legacy pipe-separated imports remain supported.
+- New CSV exports reversibly neutralize user-controlled title, notes, and project values beginning with spreadsheet-formula prefixes (`=`, `+`, `-`, or `@`). TaskMint marks the export encoding so its own re-import restores the exact original text without applying that decoding to legacy CSV files.
 - Imported data is rendered through React text contexts; TaskMint does not inject imported task text as HTML.
 - The committed production Content Security Policy uses `script-src 'self'`, `style-src 'self'`, and `connect-src 'self'`, with `object-src 'none'`, `base-uri 'self'`, and `form-action 'self'`.
 - Vite development-only inline-style/WebSocket allowances are injected only while serving the development app and are not present in the committed production HTML policy.
 - Known validation/import failures use typed `TaskMintError` codes. UI error formatting exposes those safe validation messages but replaces unknown browser/IndexedDB infrastructure errors with generic product copy.
 - Development logs redact common sensitive field names and never intentionally log task titles or notes.
 - Persistence failures are caught before optimistic React state mutation for task lifecycle operations.
-- `npm run secrets:check` scans tracked text paths for common private-key and credential-token formats as a deterministic defense-in-depth CI gate.
+- `npm run secrets:check` scans tracked text paths, including benchmark sources, for common private-key and credential-token formats as a deterministic defense-in-depth CI gate.
 - GitHub CodeQL and high-severity npm dependency auditing are included in repository automation.
+- Tagged releases fail closed unless the Git tag exactly matches `package.json` and a real committed `package-lock.json` is present; release installation uses `npm ci`.
 - `.env` files and common local artifacts are ignored.
 
 ## Secret-handling rule

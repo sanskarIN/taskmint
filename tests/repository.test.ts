@@ -1,22 +1,61 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createTask } from '../src/domain/task';
-import type { Task } from '../src/domain/types';
+import type { AppSettings, Task } from '../src/domain/types';
 import type { TaskMintDatabase } from '../src/storage/db';
-import { TaskRepository } from '../src/storage/repository';
+import { TaskRepository, defaultSettings } from '../src/storage/repository';
 
 function repositoryHarness() {
   const bulkPut = vi.fn(async (_tasks: Task[]) => undefined);
+  const toArray = vi.fn(async (): Promise<Task[]> => []);
+  const getSettings = vi.fn(async (): Promise<AppSettings | undefined> => undefined);
   const transaction = vi.fn(
     async (_mode: string, _table: unknown, scope: () => Promise<void>): Promise<void> => {
       await scope();
     }
   );
   const database = {
-    tasks: { bulkPut },
+    tasks: { bulkPut, toArray },
+    settings: { get: getSettings },
     transaction
   } as unknown as TaskMintDatabase;
-  return { repository: new TaskRepository(database), bulkPut, transaction };
+  return {
+    repository: new TaskRepository(database),
+    bulkPut,
+    toArray,
+    getSettings,
+    transaction
+  };
 }
+
+describe('TaskRepository validated reads', () => {
+  it('returns validated local tasks', async () => {
+    const { repository, toArray } = repositoryHarness();
+    const task = createTask({ title: 'Stored task' }, new Date('2026-08-19T06:00:00.000Z'));
+    toArray.mockResolvedValueOnce([task]);
+
+    await expect(repository.listTasks()).resolves.toEqual([task]);
+  });
+
+  it('rejects malformed local tasks without rewriting them', async () => {
+    const { repository, toArray } = repositoryHarness();
+    const task = createTask({ title: 'Corrupt reminder' });
+    toArray.mockResolvedValueOnce([{ ...task, reminderAt: '2026-02-31T10:00:00Z' }]);
+
+    await expect(repository.listTasks()).rejects.toThrow(/reminderAt/i);
+  });
+
+  it('returns default settings when no local settings row exists', async () => {
+    const { repository } = repositoryHarness();
+    await expect(repository.getSettings()).resolves.toEqual(defaultSettings);
+  });
+
+  it('rejects malformed local settings', async () => {
+    const { repository, getSettings } = repositoryHarness();
+    getSettings.mockResolvedValueOnce({ ...defaultSettings, theme: 'neon' as AppSettings['theme'] });
+
+    await expect(repository.getSettings()).rejects.toThrow(/theme/i);
+  });
+});
 
 describe('TaskRepository bulk persistence', () => {
   it('wraps bulk task writes in a read-write transaction', async () => {

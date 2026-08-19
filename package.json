@@ -16,6 +16,7 @@
     "secrets:check": "node scripts/check-secrets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench": "vitest bench",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "check": "npm run format:check && npm run docs:check && npm run secrets:check && npm run lint && npm run typecheck && npm run test && npm run build"

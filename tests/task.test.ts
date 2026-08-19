@@ -127,6 +127,16 @@ describe('task domain', () => {
     ).toHaveLength(1);
   });
 
+  it('does not count future completion timestamps in the last-seven-days metric', () => {
+    const now = new Date('2026-08-19T12:00:00.000Z');
+    const future = {
+      ...createTask({ title: 'Clock skew' }, now, 1000),
+      status: 'completed' as const,
+      completedAt: '2026-08-20T12:00:00.000Z'
+    };
+    expect(calculateStats([future], now).completedLast7Days).toBe(0);
+  });
+
   it('filters by smart view and computes useful statistics', () => {
     const now = new Date(2026, 7, 19, 12);
     const dueToday = createTask({ title: 'Today', dueDate: '2026-08-19' }, now, 10);

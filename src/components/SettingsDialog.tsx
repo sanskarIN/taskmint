@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { APP_VERSION } from '../config';
 import type { AppSettings, ThemeMode } from '../domain/types';
 import { strings } from '../i18n/en';
 
@@ -235,7 +236,7 @@ export function SettingsDialog({
         <div className="settings-section about-section">
           <h3>About</h3>
           <p>
-            <strong>TaskMint v0.1.0</strong> · MIT License
+            <strong>TaskMint v{APP_VERSION}</strong> · MIT License
           </p>
           <p>{strings.madeBy}</p>
           <div className="link-list">

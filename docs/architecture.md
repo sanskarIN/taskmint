@@ -6,9 +6,11 @@ TaskMint is a client-side modular monolith. It deliberately avoids a backend bec
 
 ### Domain — `src/domain/`
 
-Pure task rules live here: task creation/update, lifecycle transitions, recurrence, smart-view filtering, sorting, statistics, shared data limits, visible-slot ordering, and backup validation. Domain functions accept explicit time values where useful so tests remain deterministic.
+Pure task rules live here: task creation/update, lifecycle transitions, recurrence, smart-view filtering, sorting, statistics, shared data limits, visible-slot ordering, typed user-safe errors, and backup validation. Domain functions accept explicit time values where useful so tests remain deterministic.
 
 Task limits are centralized in `src/domain/limits.ts` so interactive creation, JSON restore, CSV import, and UI affordances do not drift into different constraints.
+
+`src/domain/errors.ts` owns stable `TaskMintError` codes and default safe messages. Domain and import modules throw those typed errors instead of inventing independent validation strings. Structured details such as row number, field name, task ID, and maximum length are carried separately from the code.
 
 ### Persistence — `src/storage/`
 
@@ -31,7 +33,7 @@ Reusable accessible components render the application. `App.tsx` wires domain op
 ## Data flow
 
 1. UI emits a typed `TaskDraft` or lifecycle action.
-2. Domain functions validate/normalize and create immutable task values.
+2. Domain functions validate/normalize and create immutable task values or a typed `TaskMintError`.
 3. Repository writes to IndexedDB.
 4. React state updates only after persistence succeeds.
 5. Filters/statistics are derived in memory from the current task set.
@@ -43,6 +45,10 @@ This ordering avoids showing successful state that was not actually persisted an
 
 Application assets are precached by the generated PWA service worker. Task content lives in IndexedDB. No network request is required for normal task operations.
 
+## Content Security Policy
+
+The committed production HTML uses origin-restricted script, style, image, connection, manifest, object, base, and form directives. Production does not include `style-src 'unsafe-inline'` or broad WebSocket schemes. The Vite development server applies a dev-only HTML transform that adds inline-style and WebSocket allowances for style injection/HMR without weakening the built release shell.
+
 ## Error boundaries and recoverable failures
 
-Expected validation errors are surfaced in the task form or import status. IndexedDB lifecycle failures are caught before React state changes and surface user-safe status text. Unexpected render failures are caught by `ErrorBoundary`, which provides a reload path without intentionally mutating stored data.
+Expected validation/import failures use stable typed errors and surface safe messages in the task form or import status. IndexedDB lifecycle failures are caught before React state changes and surface user-safe status text. Unexpected render failures are caught by `ErrorBoundary`, which provides a reload path without intentionally mutating stored data.

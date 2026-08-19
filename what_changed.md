@@ -2,132 +2,295 @@
 
 ## Current milestone
 
-- Version: `0.1.0`
+- Project: **TaskMint**
 - Repository: `https://github.com/sanskarIN/taskmint`
+- Visibility/source model: public / open source
+- License: MIT
+- Current package version: `0.1.0`
 - Default branch: `main`
 - Date: 2026-08-19
-- Phase status: Phases 0–5 implemented. Phase 6 local/source-level audit completed; hosted clean-network CI/E2E/CodeQL verification is queued on GitHub Actions and must complete before tagging `v0.1.0`.
-- Latest merge before this handoff: `0e6d893fecd6e1526afb3ff87321fb06987e1e27` — `merge: add GitHub governance and verification tooling`.
+- Git commit identity verified through GitHub: `Sanskar <sanskarin@outlook.in>`
+- Phase status: implementation phases 0–5 are substantially complete. Phase 6 source-level audit and hardening are complete for everything that can be verified without installing external npm dependencies. Hosted clean-network CI/E2E/CodeQL remains queued on GitHub Actions, so **do not tag `v0.1.0` yet**.
 
-## Completed work
+## Resume instruction
 
-### Product
+In the next continuation, read this file first, then check the latest `main`, open/queued GitHub Actions runs, and `CHANGELOG.md`. Do not rebuild completed features from scratch. Fix only verified failures or continue the exact remaining release-candidate tasks listed near the end of this file.
 
-- Implemented full task lifecycle: create, edit, complete, reopen, archive, restore, and delete.
-- Added undo for task deletion.
-- Added priorities, due dates, optional reminders, tags, projects, notes, and recurrence.
-- Added daily, weekly, and monthly recurring-task generation with month-end clamping.
-- Added Inbox, Today, Upcoming, Overdue, Completed, Archived, and All Tasks smart views.
-- Added full-text-like local search across title, notes, project, and tags.
-- Added project/tag/priority filters and manual/newest/due/priority/title sort modes.
-- Added drag-and-drop reordering plus keyboard-accessible move-up/move-down controls.
-- Added productivity statistics without streaks, penalties, or manipulative gamification.
-- Added first-run onboarding.
-- Added loading, empty, offline, transient-success, error, and fatal-render states.
-- Added responsive phone/tablet/desktop layouts.
-- Added light, dark, and system themes plus reduced-motion support.
-- Added Settings sections for appearance, accessibility, reminders, data/privacy, updates, and About.
-- Added required visible credit: `Made by the Sanskar`.
-- Added GitHub, support, business-email, and Buy Me a Coffee links without intrusive funding UI.
+## Product implementation completed
 
-### Persistence, reliability, and privacy
+- Create tasks.
+- Edit tasks.
+- Complete tasks.
+- Reopen completed tasks.
+- Archive tasks.
+- Restore archived tasks to active/completed state as appropriate.
+- Delete tasks.
+- Undo individual task deletion.
+- Priorities: low, medium, high, urgent.
+- Due dates.
+- Optional reminder date/time.
+- Notes.
+- Tags with normalization/deduplication.
+- Projects.
+- Recurrence: daily, weekly, monthly.
+- Recurring task completion creates the next occurrence.
+- Recurring completion and next-occurrence persistence are atomic through one IndexedDB bulk operation.
+- Recurring reminders continue when a recurring task has no due date.
+- Monthly recurrence clamps at the end of shorter months.
+- Impossible task dates such as `2026-02-31` are rejected/normalized away.
+- Smart views: Inbox, Today, Upcoming, Overdue, Completed, Archived, All Tasks.
+- Search across title, notes, project, and tags.
+- Project filter.
+- Tag filter.
+- Priority filter.
+- Manual, newest, due-date, priority, and title sorting.
+- Drag-and-drop task reordering.
+- Keyboard-accessible move-up/move-down alternative.
+- Reorder controls appear only while manual sorting is active.
+- Keyboard movement uses the current visible/filtered task sequence.
+- JSON backup/export.
+- JSON restore/import with destructive-replacement confirmation when local tasks already exist.
+- CSV export/import.
+- Productivity statistics without streak pressure or manipulative gamification.
+- Active/completed/archived counts.
+- Due-today/overdue counts.
+- Seven-day completion count.
+- Completion rate.
+- One-click Settings entry for local-data deletion with a destructive confirmation.
+- First-run onboarding.
+- Light theme.
+- Dark theme.
+- System theme.
+- Reduced-motion setting.
+- Responsive phone/tablet/desktop layout.
+- Loading state.
+- Empty state.
+- Offline indicator.
+- Success/status toast.
+- Form error state.
+- Fatal React render recovery state.
+- Optional browser notifications requested only after explicit user action.
+- Reminder checks while TaskMint is open.
+- Reminder suppression is reset when a reminder schedule is edited or a backup is restored.
+- PWA manifest.
+- Generated service worker / offline app-shell caching.
+- Installable PWA configuration.
+- Editable SVG app icon/source artwork.
+- Settings sections for appearance/accessibility, reminders, data/privacy, updates, and About.
+- About section reads the app version from `package.json` through `src/config.ts` rather than hard-coding the version.
+- Required visible credit: **Made by the Sanskar**.
+- GitHub, support, business-email, and Buy Me a Coffee links.
+- No forced sign-in.
+- No backend required for core operation.
+- No donation requirement or intrusive funding gate.
 
-- Added Dexie/IndexedDB persistence.
-- Added explicit schema versions 1 and 2.
-- Added migration logic for reminder, tags, project, and recurrence fields.
-- Added repository boundary so UI code does not directly manage IndexedDB transactions.
-- Added transactional restore and local-data deletion operations.
-- Added JSON backup/export and JSON restore/import.
-- Added CSV export/import with quote/newline handling.
-- Added backup schema validation, enum validation, task limits, field limits, and import file-size limits.
-- Added local one-click data deletion flow with destructive-action warning.
-- Added development-only structured logging with sensitive-field redaction.
-- Added an application Content Security Policy in the HTML shell.
-- TaskMint requires no account, application backend, API key, or production secret.
+## Data, persistence, and reliability completed
 
-### Reminders and offline behavior
+- Dexie/IndexedDB persistence.
+- Explicit IndexedDB schema version 1.
+- Explicit IndexedDB schema version 2.
+- v1→v2 upgrade normalizes reminder, tags, project, and recurrence fields.
+- Real Chromium E2E migration test seeds a native IndexedDB version-10 representation of Dexie v1 and verifies migration to Dexie v2.
+- Repository layer separates persistence from React presentation code.
+- Transactional JSON restore.
+- Transactional local-data deletion.
+- Bulk transactional reordering/import operations.
+- Atomic recurring completion/next-occurrence persistence.
+- JSON backup schema version 2.
+- Imported JSON is treated as untrusted input.
+- Backup size/task-count limits.
+- Task ID validation.
+- Duplicate backup task-ID rejection.
+- Task enum validation.
+- Strict task-order validation.
+- Real calendar-date validation.
+- Timestamp validation/canonicalization.
+- Completion/archive timestamp consistency validation.
+- Settings theme/boolean validation.
+- Tag validation, normalization, deduplication, and limits.
+- Import file-size limit.
+- JSON restore is validated completely before replacing current task data.
+- CSV parser handles quoted commas, quotes, and multiline content.
+- Direct dependency versions are exact-pinned in `package.json`.
 
-- Added opt-in browser notification permission flow.
-- Added reminder checks while TaskMint is open.
-- Added PWA manifest and generated service-worker configuration.
-- Added offline asset caching and installable-PWA configuration.
-- Added SVG application icon/source artwork.
-- Documented that reliable closed-app scheduled notifications are not claimed across every browser/OS combination.
+## Security and privacy completed
 
-### UI/UX and accessibility
+- Local-first architecture; TaskMint has no required application server or account system.
+- React rendering escapes task/user text by default.
+- Restrictive HTML Content Security Policy.
+- Scripts remain restricted to the application origin.
+- `style-src 'unsafe-inline'` is allowed only so Vite's development-time injected styles work with the documented development server.
+- `object-src 'none'`.
+- `base-uri 'self'`.
+- `form-action 'self'`.
+- Development-only structured logging.
+- Common sensitive fields are redacted by the logging helper.
+- Task titles/notes are not intentionally emitted through the structured logging helper.
+- No production API keys, credentials, signing secrets, or generated secrets were added.
+- `.env.example` contains placeholders only.
+- `.env` patterns are ignored.
+- CodeQL workflow.
+- npm dependency audit in CI.
+- Dependabot for npm dependencies.
+- Dependabot for GitHub Actions.
+- Responsible disclosure process in `SECURITY.md`.
+- Local-storage/privacy behavior documented in `PRIVACY.md`.
+- Bug report template warns contributors not to publish private task content.
 
-- Added centralized visual design tokens for colors, surfaces, spacing, radii, shadows, and motion.
-- Added responsive application shell, sticky desktop navigation, mobile reflow, touch-friendly controls, and focus-visible styles.
-- Added semantic form controls and screen-reader labels.
-- Added textual priority labels so priority is not communicated by color alone.
-- Added polite live-region status toasts.
-- Added keyboard-accessible ordering alternative to drag-and-drop.
-- Added reduced-motion behavior and documented manual release accessibility checks.
+## Accessibility and UX hardening completed
 
-### Internationalization readiness
+- Semantic native controls.
+- Screen-reader labels where visible labels are not appropriate.
+- Visible `:focus-visible` outline.
+- Keyboard alternative to drag-and-drop.
+- Non-color-only priority labels.
+- Polite live-region status toast.
+- Touch-friendly control sizing.
+- Responsive reflow.
+- Reduced-motion behavior.
+- Onboarding uses `aria-modal` and traps Tab focus on its only action.
+- Onboarding autofocuses its primary action.
+- Onboarding surfaces a save error instead of silently failing.
+- Settings moves focus into the dialog when opened.
+- Settings traps Tab/Shift+Tab within the dialog.
+- Settings closes with Escape.
+- Settings restores the previously focused control after closing.
+- Hidden import file inputs are removed from the normal tab order.
+- Settings surfaces persistence failures without discarding existing local data.
+- Task composer resets after an edit is saved or editing mode is cleared, preventing stale edited values from becoming an accidental new task.
+- Reorder controls are hidden when non-manual sorting is selected so controls never appear to do nothing.
 
-- Added an English string catalog in `src/i18n/en.ts` and kept primary shared product strings externalized as the first step toward additional locale packs.
+## Internationalization readiness
 
-### Build and code quality
+- English string catalog exists at `src/i18n/en.ts`.
+- Shared high-level product strings use the catalog.
+- Architecture is ready for further string extraction/locales without coupling domain logic to UI text.
+- English remains the only shipped locale for v0.1.
 
-- Added React + TypeScript + Vite project configuration.
-- Added strict TypeScript settings.
-- Added ESLint/type-aware lint configuration.
-- Added Prettier as the developer formatter.
-- Added deterministic CI formatting-invariant checks for LF endings, final newlines, and trailing whitespace through `scripts/check-format.mjs`.
-- Added `.editorconfig`, `.gitattributes`, `.gitignore`, `.prettierrc.json`, `.prettierignore`, and `.env.example`.
-- Pinned direct npm dependency versions exactly in `package.json`.
-- Added Node.js engine requirement.
+## Build/tooling completed
 
-### Tests
+- React + TypeScript + Vite project.
+- Strict TypeScript configuration.
+- `noUncheckedIndexedAccess`.
+- `noImplicitOverride`.
+- ES2022 application target.
+- Type-aware ESLint configured for project TypeScript.
+- E2E files included in the type-aware TypeScript project.
+- Maintenance JavaScript/config files that are not part of the TypeScript project are excluded from project-service linting.
+- Prettier configured as developer formatter.
+- Deterministic CI format-invariant script checks LF endings, final newlines, and trailing whitespace.
+- `.editorconfig`.
+- `.gitattributes`.
+- `.gitignore`.
+- `.prettierrc.json`.
+- `.prettierignore`.
+- `.env.example`.
+- Node engine requirement.
+- Vite PWA configuration.
+- Playwright configuration.
+- Strict React error boundary now explicitly marks its `state` override for `noImplicitOverride` compatibility.
 
-- Added domain tests for task normalization, recurrence boundaries, recurring completion, smart views, and statistics.
-- Added JSON backup round-trip and invalid-backup regression coverage.
-- Added CSV comma/quote/multiline round-trip coverage.
-- Added TaskComposer component coverage through Testing Library.
-- Added Playwright Chromium end-to-end coverage for creating a task, switching offline, completing the task, and verifying the Completed view.
-- Added shared React test cleanup.
+## Automated tests completed
 
-### GitHub automation and repository quality
+### Domain/unit
 
-- Added CI workflow for formatting invariants, linting, TypeScript, unit/component tests, production build, and dependency audit.
-- Added Chromium Playwright E2E workflow.
-- Added CodeQL JavaScript/TypeScript security analysis.
-- Added tag-driven release workflow with generated release notes and web artifact packaging.
-- Added Dependabot checks for npm and GitHub Actions.
-- Added privacy-aware bug report form.
-- Added feature request form.
-- Added pull-request quality checklist.
-- Added issue support routing.
-- Added Buy Me a Coffee funding configuration.
-- Added GitHub governance guidance for branch protection, Discussions, labels, milestones, and merge policy.
-- Created and merged verification PR #1 to exercise pull-request-triggered CI/E2E/CodeQL workflows.
+`tests/task.test.ts` covers:
 
-### Documentation
+- title normalization
+- tag normalization/deduplication
+- monthly month-end recurrence
+- recurring completion
+- impossible calendar-date rejection
+- recurring reminders without due dates
+- deterministic generated order based on injected completion time
+- smart-view filtering
+- productivity statistics
 
-- Added complete `README.md` with logo, value proposition, screenshots plan, features, platforms, technology, quick start, development setup, testing, build/release, architecture, security/privacy, accessibility, contribution, license, contacts, BMC badge, and credit.
-- Added `CONTRIBUTING.md`.
-- Added `CODE_OF_CONDUCT.md`.
-- Added `SECURITY.md`.
-- Added `SUPPORT.md`.
-- Added `PRIVACY.md`.
-- Added `CHANGELOG.md`.
-- Added `ROADMAP.md`.
-- Added `docs/architecture.md`.
-- Added `docs/setup.md`.
-- Added `docs/development.md`.
-- Added `docs/testing.md`.
-- Added `docs/release.md`.
-- Added `docs/troubleshooting.md`.
-- Added `docs/accessibility.md`.
-- Added `docs/performance.md`.
-- Added `docs/github.md`.
-- Added ADR 0001 for local-first PWA architecture.
-- Added ADR 0002 for the Dexie/repository persistence boundary.
-- Added `docs/screenshots/README.md` with the real-release screenshot capture plan.
-- Preserved the supplied project specification at `docs/master-prompt.md`.
+### Import/export
 
-## Files/modules added or changed
+`tests/export.test.ts` covers:
+
+- JSON backup round-trip
+- CSV commas/quotes/multiline round-trip
+- unsupported JSON backup rejection
+- duplicate task-ID rejection
+- malformed task timestamp rejection
+
+### Component
+
+`tests/TaskComposer.test.tsx` covers:
+
+- accessible simple task submission
+- stale-edit-value regression after saving an edit
+
+### End to end
+
+`e2e/task-flow.spec.ts` covers:
+
+- first-run onboarding if present
+- task creation
+- browser context going offline
+- visible Offline state
+- task completion offline
+- Completed smart-view verification
+
+`e2e/migration.spec.ts` covers:
+
+- seeding a real legacy IndexedDB database
+- opening current TaskMint against it
+- automatic v1→v2 upgrade
+- migration of `reminderAt`, `tags`, `project`, and `recurrence`
+
+## GitHub repository quality completed
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/e2e.yml`
+- `.github/workflows/codeql.yml`
+- `.github/workflows/release.yml`
+- `.github/dependabot.yml`
+- `.github/ISSUE_TEMPLATE/bug_report.yml`
+- `.github/ISSUE_TEMPLATE/feature_request.yml`
+- `.github/ISSUE_TEMPLATE/config.yml`
+- `.github/PULL_REQUEST_TEMPLATE.md`
+- `.github/FUNDING.yml`
+- CI verifies format invariants, lint, type checks, unit/component tests, production build, and high-severity npm audit.
+- E2E workflow installs Chromium and runs Playwright.
+- CodeQL scans JavaScript/TypeScript.
+- CI and CodeQL cancel superseded runs on the same ref to reduce wasted runner capacity.
+- Tagged release workflow runs the quality suite, packages `dist`, and creates GitHub Release artifacts/notes.
+- Funding points to `https://buymeacoffee.com/sanskarIN`.
+- GitHub governance guidance covers branch protection, Discussions, labels, milestones, and merge policy.
+- Verification PR #1 was created and merged to exercise pull-request workflows.
+
+## Documentation completed
+
+- `README.md`
+- `LICENSE`
+- `CONTRIBUTING.md`
+- `CODE_OF_CONDUCT.md`
+- `SECURITY.md`
+- `SUPPORT.md`
+- `PRIVACY.md`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `what_changed.md`
+- `docs/architecture.md`
+- `docs/setup.md`
+- `docs/development.md`
+- `docs/testing.md`
+- `docs/release.md`
+- `docs/troubleshooting.md`
+- `docs/accessibility.md`
+- `docs/performance.md`
+- `docs/github.md`
+- `docs/adr/0001-local-first-pwa.md`
+- `docs/adr/0002-dexie-repository.md`
+- `docs/screenshots/README.md`
+- `docs/master-prompt.md`
+
+The supplied master development prompt is preserved in `docs/master-prompt.md` so continuation work does not depend on chat history.
+
+## Main implementation/configuration files
 
 ### Root/build
 
@@ -152,6 +315,7 @@
 
 - `src/App.tsx`
 - `src/main.tsx`
+- `src/config.ts`
 - `src/styles.css`
 - `src/domain/types.ts`
 - `src/domain/task.ts`
@@ -178,140 +342,123 @@
 - `tests/export.test.ts`
 - `tests/TaskComposer.test.tsx`
 - `e2e/task-flow.spec.ts`
+- `e2e/migration.spec.ts`
 
-### GitHub
-
-- `.github/workflows/ci.yml`
-- `.github/workflows/e2e.yml`
-- `.github/workflows/codeql.yml`
-- `.github/workflows/release.yml`
-- `.github/dependabot.yml`
-- `.github/ISSUE_TEMPLATE/bug_report.yml`
-- `.github/ISSUE_TEMPLATE/feature_request.yml`
-- `.github/ISSUE_TEMPLATE/config.yml`
-- `.github/PULL_REQUEST_TEMPLATE.md`
-- `.github/FUNDING.yml`
-
-### Documentation/policy
-
-- `README.md`
-- `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
-- `SUPPORT.md`
-- `PRIVACY.md`
-- `CHANGELOG.md`
-- `ROADMAP.md`
-- `what_changed.md`
-- `docs/architecture.md`
-- `docs/setup.md`
-- `docs/development.md`
-- `docs/testing.md`
-- `docs/release.md`
-- `docs/troubleshooting.md`
-- `docs/accessibility.md`
-- `docs/performance.md`
-- `docs/github.md`
-- `docs/adr/0001-local-first-pwa.md`
-- `docs/adr/0002-dexie-repository.md`
-- `docs/screenshots/README.md`
-- `docs/master-prompt.md`
-
-## Verification performed
+## Verification performed in this session
 
 ### Passed locally/source-level
 
-- Parsed all JSON configuration files used by the project.
-- Parsed all `.github/**/*.yml` workflow/config files.
-- Strict TypeScript core type-check passed for domain types, domain logic, backup validation, and data-portability modules using the locally available TypeScript compiler.
-- Core compiled runtime assertions passed for title normalization, tag deduplication, weekly recurrence, recurring completion/next-occurrence generation, CSV quote/newline round-trip, and JSON backup round-trip.
-- TypeScript/TSX syntax transpilation audit passed for every TypeScript/TSX source/config/test file in the prepared workspace.
-- Source audit found and fixed ES2022-incompatible `Array.prototype.toSorted` usage before push.
-- Workflow audit found and fixed npm-cache configuration that would have required a missing lockfile.
-- Deterministic formatting invariant check passed across 72 tracked text paths locally.
-- Required-file and README relative-link audit passed locally.
-- TODO/FIXME audit found no implementation placeholders; the only `TODO` text is the supplied master prompt discussing placeholder policy.
-- Git author/committer metadata was verified on connector-created commits as `Sanskar <sanskarin@outlook.in>`.
+- Parsed project JSON configuration files.
+- Parsed `.github/**/*.yml` workflow/config files.
+- Strict TypeScript core type-check passed for domain types, task business logic, backup validation, and JSON/CSV modules using the locally available TypeScript compiler.
+- The stricter core check was rerun with `--strict`, `--noUncheckedIndexedAccess`, `--noFallthroughCasesInSwitch`, and `--noImplicitOverride` where applicable to the dependency-free core set.
+- Compiled runtime assertions passed for task normalization, tag deduplication, recurrence, recurring completion, recurring reminders without a due date, impossible-date normalization, duplicate-backup rejection, malformed-timestamp rejection, CSV round-trip, and JSON backup round-trip.
+- TypeScript/TSX syntax transpilation audit passed on the locally prepared source/test workspace after the restore/reorder/reminder hardening changes.
+- Deterministic formatting-invariant check passed on the locally prepared tracked text set before the final GitHub-only documentation/component refinements.
+- Required-file and README relative-link audit passed earlier in the session.
+- GitHub code search currently returns no implementation `TODO`, `FIXME`, or `XXX` placeholders.
+- A source audit found and fixed ES2022-incompatible `Array.prototype.toSorted` use.
+- A strict TypeScript review found and fixed the React error-boundary `state` override.
+- A CSP review found and fixed Vite development styling being blocked by the original style policy.
+- A data-integrity review found and fixed malformed/duplicate backup acceptance.
+- A recurrence review found and fixed reminder recurrence without due dates and non-atomic recurring writes.
+- An edit-state review found and fixed stale TaskComposer values after editing.
+- A reorder review found and fixed controls being active under non-manual sorts and keyboard movement using hidden global neighbors.
+- A modal accessibility review added focus trapping/restoration and persistence-error feedback.
+- Git commit metadata was verified on connector-created commits as `Sanskar <sanskarin@outlook.in>`.
 
-### Hosted GitHub verification
+### Hosted GitHub verification status
 
-Verification PR: `#1` — `docs: verify v0.1 repository quality gates`.
+Verification PR: **#1 — `docs: verify v0.1 repository quality gates`**.
 
-The PR was merged after GitHub reported it as mergeable. At the time this handoff was written, hosted runners were still queued rather than completed:
+The PR was merged after GitHub reported it as mergeable. The PR-head hosted runs remain queued at the latest check in this session:
 
-- CodeQL run `32213783595` — queued.
-- E2E run `32213783601` — queued.
-- CI run `32213783631` — queued.
+- CodeQL run `32213783595` — `queued`
+- E2E run `32213783601` — `queued`
+- CI run `32213783631` — `queued`
 
-Do not interpret the queued state as a passing or failing result. No `v0.1.0` release tag has been created because the definition of done requires the hosted checks to finish successfully first.
+These queued states are **not** treated as success. No `v0.1.0` tag was created.
 
-### Environment/tooling limitation
+CI and CodeQL on current `main` now contain concurrency cancellation so future superseded runs on the same ref do not continue consuming runner capacity.
 
-- The execution sandbox could not resolve the npm registry host, so a clean `npm install`, generated lockfile, full dependency-backed `npm run check`, Playwright browser installation, and production build could not be executed locally in this session.
-- The sandbox also could not resolve `github.com` for a shell-based clone, so repository writes and inspections were performed through the authenticated GitHub connector instead.
-- Everything that could be verified without those external network dependencies was verified locally/source-level and recorded above.
+## Environment/tooling limitations
 
-## Known limitations
+- The execution sandbox could not resolve the npm registry host, so a clean dependency installation could not be completed locally.
+- Because dependencies could not be installed locally, the complete dependency-backed `npm run check`, production Vite build, and Playwright browser run could not be executed in the sandbox.
+- `package-lock.json` could not be generated from a real successful npm resolution in this environment and therefore was not fabricated.
+- The execution sandbox also could not resolve `github.com` for a shell clone/push. Repository reads/writes were performed through the authenticated GitHub connector.
+- Hosted GitHub runners are currently queued, which is outside the repository code itself. The repository therefore remains a release candidate rather than a tagged release.
 
-- Reminder checks run while TaskMint is open. Reliable closed-app scheduled notification delivery is not claimed on every web/PWA platform.
-- Real release screenshots have not been fabricated. They must be captured from a browser-verified release build after hosted checks succeed.
-- A Tauri wrapper is intentionally not included in v0.1 because the PWA fulfills the primary Windows/macOS/Linux target without native-wrapper complexity. Native packaging remains an evaluated future option rather than an unfinished core feature.
-- Full transitive npm locking is pending a successful network-backed installation. Direct dependency versions are exact-pinned meanwhile.
+## Known limitations that are intentionally documented
 
-## Open issues / next exact tasks
+- Browser reminders are checked while TaskMint is open. Reliable closed-app scheduled notification delivery is not claimed across all web/PWA browser/OS combinations.
+- Real screenshots have not been fabricated. `docs/screenshots/README.md` defines the exact screenshot set to capture after a browser-verified release build succeeds.
+- A Tauri desktop wrapper is not included in v0.1 because the PWA already targets Windows/macOS/Linux. Tauri remains an optional future evaluation only if native-only capabilities justify the added complexity.
+- Full transitive npm locking is pending a successful clean npm registry resolution. Direct dependencies remain exact-version pinned meanwhile.
 
-1. Re-check GitHub Actions run IDs `32213783595`, `32213783601`, and `32213783631` until they reach completed conclusions.
-2. If any hosted check fails, inspect the failed job/step logs, fix the reported issue with a regression test where appropriate, and rerun only the affected workflow/job.
-3. When hosted CI succeeds, run/capture a production browser smoke test and real screenshots listed in `docs/screenshots/README.md` using fictional task data only.
-4. Generate and commit `package-lock.json` from a successful clean npm installation if npm remains the selected package manager.
-5. Update this file and `CHANGELOG.md` with final verification results.
-6. Tag `v0.1.0` only after CI, CodeQL, E2E, production build, and release checks are green.
+## Next exact tasks
+
+1. Re-check hosted run IDs `32213783595`, `32213783601`, and `32213783631` and current `main` workflow status.
+2. If a hosted check fails, inspect the exact failed job/step log and commit the smallest regression fix; do not guess.
+3. Once npm installation is available, run from a clean checkout:
+   - `npm install`
+   - `npm run format:check`
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - `npm run build`
+   - `npm audit --audit-level=high`
+   - `npm run test:e2e:install`
+   - `npm run test:e2e`
+4. Generate and commit a real `package-lock.json` from that successful clean installation if npm remains the package manager.
+5. Capture the real release screenshots listed in `docs/screenshots/README.md` using fictional/demo task data only.
+6. Re-run the clean release checklist in `docs/release.md`.
+7. Update `CHANGELOG.md` and this file with the final green verification results.
+8. Only then create the `v0.1.0` tag and allow the release workflow to publish the web artifact.
 
 ## Migration notes
 
 - IndexedDB v1: base `tasks` and `settings` stores.
-- IndexedDB v2: adds reminder-aware and multi-entry tag indexing and normalizes reminder/tags/project/recurrence fields during upgrade.
-- Task backup schema: version 2. Unsupported/invalid backup schemas are rejected before replacing local data.
+- IndexedDB v2: adds reminder-aware and multi-entry tag indexing and normalizes missing reminder/tags/project/recurrence fields during upgrade.
+- E2E migration coverage now exercises the v1→v2 path in Chromium.
+- Task JSON backup schema: version 2.
+- Unsupported backup schema versions are rejected before data replacement.
+- Malformed timestamps, duplicate IDs, invalid orders, impossible dates, and inconsistent task status timestamps are rejected before restore.
 
 ## Release notes draft
 
-TaskMint v0.1.0 introduces an offline-first task manager with local IndexedDB persistence; complete task lifecycle; projects, tags, priorities, notes, due dates, reminders, and recurrence; smart views, search, filtering, sorting, drag-and-drop and keyboard ordering; JSON/CSV portability; productivity statistics; accessible responsive themes; onboarding/settings/About; PWA offline caching; privacy/security controls; automated tests; CodeQL/CI/E2E/release automation; and a complete open-source documentation/governance baseline.
+TaskMint v0.1.0 is an offline-first, local-data task manager with a full task lifecycle; priorities, notes, due dates, reminders, tags, projects and recurring tasks; smart views, search, filtering and sorting; accessible manual reordering; JSON/CSV portability; productivity statistics; light/dark/system themes; first-run onboarding; privacy/data controls; an installable PWA; validated IndexedDB migrations; security/privacy hardening; automated unit/component/E2E coverage; and professional GitHub CI, CodeQL, release, Dependabot, issue, contribution, funding, and documentation infrastructure.
 
-## Recent meaningful commit history
+## Most recent meaningful commits
 
+- `45eb3598010f4de3ed42610a2f2f63ee27f07ed8` — `docs: record release candidate hardening fixes`
+- `bacca52571741d693881e507a5cb58700a842a01` — `docs: document modal focus accessibility`
+- `fd191dcccceb9730addd7b2bd3cfa49d995e0b59` — `docs: document migration and regression coverage`
+- `5e23d5f542d83d4ee46318beb04d14d0f301fc60` — `refactor: display package version in About`
+- `6ab4f94a1999a9ff94613319c307056780674e15` — `refactor: centralize app version metadata`
+- `62355de63dcb8ff2d8c16484413f0be499ff6aec` — `fix: trap settings focus and surface persistence errors`
+- `8d7c9faf022460a824a4d2b16a108ce371646480` — `fix: trap keyboard focus during onboarding`
+- `e44a37a89256aa35e2f3bb6b1459e4a0c5443276` — `fix: persist recurring completion atomically`
+- `c5d7499c59ed9ed739f1dff1209c8569175351f7` — `fix: harden restore reminders and filtered reordering`
+- `a9a65e18b0fcdae2b2ede45dc7cad5214c3bf79f` — `fix: limit reorder controls to manual sorting`
+- `63207f727d0c9757629010421e824135e4269d27` — `test: prevent stale values after task edits`
+- `dbf3b044ac363e5b684828de114f462dddf95708` — `fix: reset composer after editing completes`
+- `836bb9a53f7f42b1ab12e7a7905dab2f673f72e3` — `ci: cancel superseded CodeQL runs`
+- `a88e6fd3f8ae80d02fef54d91f9f23c34808bc6a` — `ci: cancel superseded quality runs`
+- `ea3525017ef98bf9f71248447efbf292d6aaac1d` — `test: exercise IndexedDB v1 to v2 migration`
+- `bb8fa555e74bf05fe7663eebbe512bc9517311d8` — `test: cover recurrence reminders and calendar edge cases`
+- `09d9a939e143cfc52631c5a5952706f621636a51` — `fix: handle recurring reminders and invalid calendar dates`
+- `70b9b9c019aa2658d7b71eb5982a106e50723614` — `test: cover corrupt backup identifiers and timestamps`
+- `271d2b4f7c36a6025a59c0f27fbb9ac0f11e40a8` — `fix: harden backup date and id validation`
+- `f6b54cb26cbd0085f35881544070fb50a70f0178` — `fix: permit Vite injected styles under CSP`
+- `28120e79aa4418973eef2d0fafcf497ad4c8b216` — `fix: satisfy strict override checks in error boundary`
+- `9496673434bc57d9a6712d043d4c784eb9dd865f` — `fix: include end-to-end tests in type-aware project`
+- `c92f64608dfe343ed881ca4bf713769cda66f564` — `fix: scope type-aware linting to project TypeScript`
 - `0e6d893fecd6e1526afb3ff87321fb06987e1e27` — `merge: add GitHub governance and verification tooling`
 - `b513fe794a6ff86ecd4fc1ae788979aad242eeba` — `build: use deterministic CI formatting check`
 - `98d3050c5e26f381525afd5087c9d1c8fce621a6` — `build: add deterministic formatting invariant check`
 - `9dea65673df3b6d55691b3d48c9a0c1aa9d50840` — `docs: add GitHub governance guidance`
 - `938011967e9f4174339d5a842ad80c426f088598` — `docs: preserve master development prompt`
-- `9dffa9c14ac83470397c0393dbb9433509abe220` — `docs: add release screenshot capture plan`
-- `a8901414f34420013b07b662dcf0a90a55a18749` — `docs: record IndexedDB repository decision`
-- `03c8138c7ca45ae19c5834c66a41fb54fdcd7f01` — `docs: record local-first PWA architecture decision`
-- `8b926174be952bce789473becb855da651298f00` — `docs: document performance budgets`
-- `6b11cee46d40a6df688efb3f09591dcfc87d717b` — `docs: document accessibility baseline`
-- `267fb4004de24e4b04a96393863d8d69b6b629a2` — `docs: add troubleshooting guide`
-- `e2ddc35889e45107c9ba42859541b76d68f8a473` — `docs: add release checklist`
-- `60175ba90a29ae530e6fbc2ac7531f619472ec03` — `docs: document test strategy`
-- `4d974cd2a6fd55e7135c5dce717d6e77f1ce57e3` — `docs: document application architecture`
-- `f9c4446ef762cc5aea39ec126e9ee83e0ec000a8` — `style: add responsive accessible design system`
-- `2a6bd3fbbd56394a21d5594b9e785d7b8be20bd9` — `feat: mount application with error boundary`
-- `1cca247dec226c5361c12b7539a5ced5b2353431` — `feat: wire complete TaskMint application workflow`
-- `7046259c13db878280af38351c781a1e0188e720` — `feat: add privacy data appearance and about settings`
-- `227fb2ac72efc85deb82de899fed9c125bc6a40c` — `feat: add accessible task item interactions`
-- `3359bd2e61df7735ff374c179e4f02c9fde916ab` — `feat: add task creation and editing form`
-- `c9dad1f4b4eef4f53515a9d943f24b179e69c9c5` — `test: add offline primary journey coverage`
-- `fd35ccb127c47288634c1b053ffc55cca531988c` — `test: cover accessible task composer submission`
-- `4bf2b7fd2a41679637c006191600634cebd3cb78` — `test: cover JSON and CSV portability`
-- `eba3ff6003ba554de2dc0ca90706b03ccc1f5b05` — `test: cover task lifecycle recurrence and statistics`
-- `c7858397b876d53f8941bc40595da1ea443dfc46` — `ci: add CodeQL security analysis`
-- `97ab7e928b9237ba5b0b7ae13d50107e6a732ec2` — `ci: add Chromium end-to-end workflow`
-- `60b14355fbe81aaa4c66e208fd962ea71fe44cb8` — `ci: add full quality verification workflow`
-- `808108c4b9619fe43c85e15ab057f25eb308eeca` — `feat: add JSON and CSV data portability`
-- `b3381e778e7dcaac50388933944f40e5e0a394da` — `feat: add transactional task repository`
-- `40d62e6711f507d6c35c10090a02aeb025ea9198` — `feat: add versioned IndexedDB schema`
-- `423df72adfc5240ce117e449077ce9db71f2fc79` — `feat: validate imported task backups`
-- `a963b1b2a9a7e2bddb474d6b6532cc738db3c4ec` — `feat: implement task lifecycle recurrence and smart views`
-- `421918930b1a5dde3ae04ccb46e750cdc468f54f` — `feat: define task domain types`
 - `0bf69dada1a5ec478be3e17ebf354cac823e921b` — `build: bootstrap React TypeScript PWA toolchain`
 
-This handoff file is the source of truth for the next continuation session.
+Earlier feature/test/documentation commits are intentionally preserved in repository history rather than squashed. This file is the source of truth for the next continuation session.

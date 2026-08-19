@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
+import { TASK_LIMITS } from '../domain/limits';
 import type { Recurrence, Task, TaskDraft } from '../domain/types';
 import { strings } from '../i18n/en';
 
@@ -96,7 +97,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
           onChange={(event) => setTitle(event.target.value)}
           onFocus={() => setExpanded(true)}
           placeholder="What needs to be done?"
-          maxLength={240}
+          maxLength={TASK_LIMITS.title}
           required
           autoComplete="off"
         />
@@ -112,7 +113,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              maxLength={20000}
+              maxLength={TASK_LIMITS.notes}
               rows={3}
             />
           </label>
@@ -145,7 +146,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
             <input
               value={project}
               onChange={(event) => setProject(event.target.value)}
-              maxLength={80}
+              maxLength={TASK_LIMITS.project}
               placeholder="e.g. School"
             />
           </label>
@@ -154,8 +155,12 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
             <input
               value={tags}
               onChange={(event) => setTags(event.target.value)}
+              aria-describedby={`${formId}-tags-help`}
               placeholder="study, important"
             />
+            <span id={`${formId}-tags-help`} className="field-help">
+              Up to {TASK_LIMITS.tags} comma-separated tags; {TASK_LIMITS.tag} characters each.
+            </span>
           </label>
           <label>
             Repeat

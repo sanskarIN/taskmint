@@ -29,6 +29,7 @@ import { defaultSettings, repository } from './storage/repository';
 import { csvToTasks, downloadText, parseBackup, serializeBackup, tasksToCsv } from './utils/export';
 import { isEditableTarget, resolveGlobalShortcut } from './utils/keyboard';
 import { logError, logEvent } from './utils/logger';
+import { runExclusiveMutation } from './utils/mutation';
 import { notifyDueTasks, requestNotificationPermission } from './utils/notifications';
 
 const defaultFilters: TaskFilters = {
@@ -59,6 +60,8 @@ export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(TASK_PAGE_SIZE);
   const [now, setNow] = useState(() => new Date());
+  const [taskMutationBusy, setTaskMutationBusy] = useState(false);
+  const taskMutationLock = useRef(false);
   const draggedTask = useRef<Task | null>(null);
   const notifiedIds = useRef(new Set<string>());
   const searchInput = useRef<HTMLInputElement>(null);
@@ -130,7 +133,7 @@ export default function App() {
         altKey: event.altKey,
         shiftKey: event.shiftKey,
         editableTarget: isEditableTarget(event.target),
-        blocked: settingsOpen || !settings.onboardingComplete
+        blocked: taskMutationBusy || settingsOpen || !settings.onboardingComplete
       });
       if (!shortcut) return;
       if (shortcut === 'new-task' && editingTask) return;
@@ -144,7 +147,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editingTask, settings.onboardingComplete, settingsOpen]);
+  }, [editingTask, settings.onboardingComplete, settingsOpen, taskMutationBusy]);
 
   useEffect(() => {
     if (!settings.notificationsEnabled) return;
@@ -199,146 +202,174 @@ export default function App() {
   }
 
   async function saveDraft(draft: TaskDraft) {
-    if (editingTask) {
-      const next = updateTask(editingTask, draft);
-      const reminderChanged = editingTask.reminderAt !== next.reminderAt;
-      try {
-        await repository.putTask(next);
-      } catch (error) {
-        logError('task_update_failed', error);
-        throw new Error(strings.taskSavedError);
-      }
-      if (reminderChanged) notifiedIds.current.delete(next.id);
-      setTasks((current) => current.map((task) => (task.id === next.id ? next : task)));
-      setEditingTask(null);
-      setToast({ message: strings.taskUpdated });
-      logEvent('task_updated', { taskId: next.id });
-      return;
-    }
+    await runExclusiveMutation(
+      taskMutationLock,
+      setTaskMutationBusy,
+      async () => {
+        if (editingTask) {
+          const next = updateTask(editingTask, draft);
+          const reminderChanged = editingTask.reminderAt !== next.reminderAt;
+          try {
+            await repository.putTask(next);
+          } catch (error) {
+            logError('task_update_failed', error);
+            throw new Error(strings.taskSavedError);
+          }
+          if (reminderChanged) notifiedIds.current.delete(next.id);
+          setTasks((current) => current.map((task) => (task.id === next.id ? next : task)));
+          setEditingTask(null);
+          setToast({ message: strings.taskUpdated });
+          logEvent('task_updated', { taskId: next.id });
+          return;
+        }
 
-    const task = createTask(draft, new Date(), nextTaskOrder(tasks));
-    try {
-      await repository.putTask(task);
-    } catch (error) {
-      logError('task_create_failed', error);
-      throw new Error(strings.taskSavedError);
-    }
-    setTasks((current) => [...current, task]);
-    setToast({ message: strings.taskAdded });
-    logEvent('task_created', { taskId: task.id });
+        const task = createTask(draft, new Date(), nextTaskOrder(tasks));
+        try {
+          await repository.putTask(task);
+        } catch (error) {
+          logError('task_create_failed', error);
+          throw new Error(strings.taskSavedError);
+        }
+        setTasks((current) => [...current, task]);
+        setToast({ message: strings.taskAdded });
+        logEvent('task_created', { taskId: task.id });
+      },
+      strings.taskSavedError
+    );
   }
 
   async function toggleTask(task: Task) {
-    if (task.status === 'completed') {
-      const next = reopenTask(task);
-      const saved = await runUserAction('task_reopen_failed', strings.taskReopenError, () =>
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      if (task.status === 'completed') {
+        const next = reopenTask(task);
+        const saved = await runUserAction('task_reopen_failed', strings.taskReopenError, () =>
+          repository.putTask(next)
+        );
+        if (!saved) return;
+        replaceLocal(next);
+        logEvent('task_reopened', { taskId: next.id });
+        return;
+      }
+      if (task.status !== 'active') return;
+
+      let result: ReturnType<typeof completeTask>;
+      try {
+        result = completeTask(task, new Date(), nextTaskOrder(tasks));
+      } catch (error) {
+        logError('task_complete_failed', error);
+        setToast({ message: userErrorMessage(error, strings.taskCompleteError) });
+        return;
+      }
+      const saved = await runUserAction('task_complete_failed', strings.taskCompleteError, () =>
+        result.next
+          ? repository.putTasks([result.completed, result.next])
+          : repository.putTask(result.completed)
+      );
+      if (!saved) return;
+      setTasks((current) => [
+        ...current.map((item) => (item.id === result.completed.id ? result.completed : item)),
+        ...(result.next ? [result.next] : [])
+      ]);
+      setToast({ message: result.next ? strings.recurringTaskCompleted : strings.taskCompleted });
+      logEvent('task_completed', { taskId: result.completed.id, recurring: Boolean(result.next) });
+    });
+  }
+
+  async function archive(task: Task) {
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      const next = archiveTask(task);
+      const saved = await runUserAction('task_archive_failed', strings.taskArchiveError, () =>
         repository.putTask(next)
       );
       if (!saved) return;
       replaceLocal(next);
-      logEvent('task_reopened', { taskId: next.id });
-      return;
-    }
-    if (task.status !== 'active') return;
-
-    const result = completeTask(task);
-    const saved = await runUserAction('task_complete_failed', strings.taskCompleteError, () =>
-      result.next
-        ? repository.putTasks([result.completed, result.next])
-        : repository.putTask(result.completed)
-    );
-    if (!saved) return;
-    setTasks((current) => [
-      ...current.map((item) => (item.id === result.completed.id ? result.completed : item)),
-      ...(result.next ? [result.next] : [])
-    ]);
-    setToast({ message: result.next ? strings.recurringTaskCompleted : strings.taskCompleted });
-    logEvent('task_completed', { taskId: result.completed.id, recurring: Boolean(result.next) });
-  }
-
-  async function archive(task: Task) {
-    const next = archiveTask(task);
-    const saved = await runUserAction('task_archive_failed', strings.taskArchiveError, () =>
-      repository.putTask(next)
-    );
-    if (!saved) return;
-    replaceLocal(next);
-    logEvent('task_archived', { taskId: next.id });
+      logEvent('task_archived', { taskId: next.id });
+    });
   }
 
   async function restore(task: Task) {
-    const next = restoreTask(task);
-    const saved = await runUserAction('task_restore_failed', strings.taskRestoreError, () =>
-      repository.putTask(next)
-    );
-    if (!saved) return;
-    replaceLocal(next);
-    logEvent('task_restored', { taskId: next.id });
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      const next = restoreTask(task);
+      const saved = await runUserAction('task_restore_failed', strings.taskRestoreError, () =>
+        repository.putTask(next)
+      );
+      if (!saved) return;
+      replaceLocal(next);
+      logEvent('task_restored', { taskId: next.id });
+    });
   }
 
   async function remove(task: Task) {
-    const deleted = await runUserAction('task_delete_failed', strings.taskDeleteError, () =>
-      repository.deleteTask(task.id)
-    );
-    if (!deleted) return;
-    setTasks((current) => current.filter((item) => item.id !== task.id));
-    setEditingTask((current) => (current?.id === task.id ? null : current));
-    setToast({
-      message: strings.taskDeleted,
-      actionLabel: strings.undo,
-      action: async () => {
-        const restored = await runUserAction(
-          'task_delete_undo_failed',
-          strings.taskDeleteUndoError,
-          () => repository.putTask(task)
-        );
-        if (!restored) return;
-        setTasks((current) => [...current, task]);
-        setToast({ message: strings.taskRestored });
-      }
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      const deleted = await runUserAction('task_delete_failed', strings.taskDeleteError, () =>
+        repository.deleteTask(task.id)
+      );
+      if (!deleted) return;
+      setTasks((current) => current.filter((item) => item.id !== task.id));
+      setEditingTask((current) => (current?.id === task.id ? null : current));
+      setToast({
+        message: strings.taskDeleted,
+        actionLabel: strings.undo,
+        action: async () => {
+          await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+            const restored = await runUserAction(
+              'task_delete_undo_failed',
+              strings.taskDeleteUndoError,
+              () => repository.putTask(task)
+            );
+            if (!restored) return;
+            setTasks((current) => [...current, task]);
+            setToast({ message: strings.taskRestored });
+          });
+        }
+      });
+      logEvent('task_deleted', { taskId: task.id });
     });
-    logEvent('task_deleted', { taskId: task.id });
   }
 
   async function move(task: Task, direction: -1 | 1) {
-    const active = renderedTasks
-      .filter((item) => item.status === 'active')
-      .sort(compareTaskOrder);
-    const index = active.findIndex((item) => item.id === task.id);
-    const target = active[index + direction];
-    if (!target) return;
-    const moved = { ...task, order: target.order, updatedAt: new Date().toISOString() };
-    const swapped = { ...target, order: task.order, updatedAt: new Date().toISOString() };
-    const saved = await runUserAction('task_keyboard_reorder_failed', strings.taskReorderError, () =>
-      repository.putTasks([moved, swapped])
-    );
-    if (!saved) return;
-    setTasks((current) =>
-      current.map((item) => (item.id === moved.id ? moved : item.id === swapped.id ? swapped : item))
-    );
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      const active = renderedTasks
+        .filter((item) => item.status === 'active')
+        .sort(compareTaskOrder);
+      const index = active.findIndex((item) => item.id === task.id);
+      const target = active[index + direction];
+      if (!target) return;
+      const moved = { ...task, order: target.order, updatedAt: new Date().toISOString() };
+      const swapped = { ...target, order: task.order, updatedAt: new Date().toISOString() };
+      const saved = await runUserAction('task_keyboard_reorder_failed', strings.taskReorderError, () =>
+        repository.putTasks([moved, swapped])
+      );
+      if (!saved) return;
+      setTasks((current) =>
+        current.map((item) => (item.id === moved.id ? moved : item.id === swapped.id ? swapped : item))
+      );
+    });
   }
 
   async function dropOn(target: Task) {
-    const source = draggedTask.current;
-    draggedTask.current = null;
-    if (
-      !source ||
-      source.id === target.id ||
-      source.status !== 'active' ||
-      target.status !== 'active' ||
-      filters.sort !== 'manual'
-    ) {
-      return;
-    }
-    const activeRenderedTasks = renderedTasks.filter((task) => task.status === 'active');
-    const changed = reorderVisibleTasks(activeRenderedTasks, source.id, target.id);
-    if (!changed.length) return;
-    const saved = await runUserAction('task_drag_reorder_failed', strings.taskReorderError, () =>
-      repository.putTasks(changed)
-    );
-    if (!saved) return;
-    const changedById = new Map(changed.map((task) => [task.id, task]));
-    setTasks((current) => current.map((task) => changedById.get(task.id) ?? task));
+    await runExclusiveMutation(taskMutationLock, setTaskMutationBusy, async () => {
+      const source = draggedTask.current;
+      draggedTask.current = null;
+      if (
+        !source ||
+        source.id === target.id ||
+        source.status !== 'active' ||
+        target.status !== 'active' ||
+        filters.sort !== 'manual'
+      ) {
+        return;
+      }
+      const activeRenderedTasks = renderedTasks.filter((task) => task.status === 'active');
+      const changed = reorderVisibleTasks(activeRenderedTasks, source.id, target.id);
+      if (!changed.length) return;
+      const saved = await runUserAction('task_drag_reorder_failed', strings.taskReorderError, () =>
+        repository.putTasks(changed)
+      );
+      if (!saved) return;
+      const changedById = new Map(changed.map((task) => [task.id, task]));
+      setTasks((current) => current.map((task) => changedById.get(task.id) ?? task));
+    });
   }
 
   async function changeSettings(next: AppSettings) {
@@ -453,7 +484,14 @@ export default function App() {
           >
             {strings.statistics}
           </button>
-          <button className="secondary" type="button" onClick={() => setSettingsOpen(true)}>
+          <button
+            className="secondary"
+            type="button"
+            disabled={taskMutationBusy}
+            onClick={() => {
+              if (!taskMutationLock.current) setSettingsOpen(true);
+            }}
+          >
             {strings.settings}
           </button>
         </div>
@@ -474,6 +512,7 @@ export default function App() {
           <TaskComposer
             editingTask={editingTask}
             titleInputRef={taskTitleInput}
+            disabled={taskMutationBusy}
             onSubmit={saveDraft}
             onCancelEdit={() => setEditingTask(null)}
           />
@@ -503,7 +542,7 @@ export default function App() {
               </div>
             ) : (
               <>
-                <ul id="task-list" className="task-list">
+                <ul id="task-list" className="task-list" aria-busy={taskMutationBusy}>
                   {renderedTasks.map((task) => (
                     <TaskItem
                       key={task.id}
@@ -512,6 +551,7 @@ export default function App() {
                         task.status === 'active' && Boolean(task.dueDate) && task.dueDate! < today
                       }
                       canReorder={filters.sort === 'manual' && task.status === 'active'}
+                      disabled={taskMutationBusy}
                       onToggle={toggleTask}
                       onEdit={(next) => {
                         setEditingTask(next);
@@ -563,7 +603,7 @@ export default function App() {
         <div className="toast" role="status" aria-live="polite">
           <span>{toast.message}</span>
           {toast.action && (
-            <button type="button" onClick={() => void toast.action?.()}>
+            <button type="button" disabled={taskMutationBusy} onClick={() => void toast.action?.()}>
               {toast.actionLabel ?? strings.undo}
             </button>
           )}

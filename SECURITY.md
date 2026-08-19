@@ -21,8 +21,15 @@ Do not publish secrets, private task content, exploit details that could put use
 - Content Security Policy limits executable/resource origins to the application origin.
 - Development logs redact common sensitive field names and never intentionally log task titles or notes.
 - Persistence failures are caught before optimistic React state mutation for task lifecycle operations.
-- GitHub CodeQL and dependency auditing are included in repository automation.
+- `npm run secrets:check` scans tracked text paths for common private-key and credential-token formats as a deterministic defense-in-depth CI gate.
+- GitHub CodeQL and high-severity npm dependency auditing are included in repository automation.
 - `.env` files and common local artifacts are ignored.
+
+## Secret-handling rule
+
+The repository secret-pattern guard is not a substitute for GitHub secret scanning, manual review, or credential rotation. If a real credential is ever committed, treat it as compromised: revoke/rotate it through its provider and remove it from active configuration rather than relying only on a later Git history edit.
+
+Never add a real secret to test the scanner. Use synthetic fixtures that do not authenticate to any service.
 
 ## Limitations
 

@@ -1,6 +1,7 @@
 import { TaskMintError } from '../domain/errors';
 
 const blockedKeys = /password|token|secret|authorization|cookie|notes|title/i;
+const safeIdentifierKey = /^(?:id|[A-Za-z][A-Za-z0-9]*(?:Id|ID)|[a-z][a-z0-9_]*_id)$/;
 const safeIdentifier = /^[A-Za-z0-9._:-]{1,128}$/;
 
 export function logEvent(event: string, metadata: Record<string, unknown> = {}): void {
@@ -23,6 +24,12 @@ export function logError(event: string, error: unknown): void {
 function sanitizeEventValue(key: string, value: unknown): unknown {
   if (blockedKeys.test(key)) return '[REDACTED]';
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
-  if (typeof value === 'string' && /id$/i.test(key) && safeIdentifier.test(value)) return value;
+  if (
+    typeof value === 'string' &&
+    safeIdentifierKey.test(key) &&
+    safeIdentifier.test(value)
+  ) {
+    return value;
+  }
   return '[REDACTED]';
 }

@@ -22,6 +22,33 @@ describe('data portability', () => {
     expect(imported[0]?.tags).toEqual(['home', 'errand']);
   });
 
+  it('round-trips a deterministic stress set of CSV text edge cases', () => {
+    const tasks = Array.from({ length: 64 }, (_, index) =>
+      createTask({
+        title: `Task ${index}, "quoted" ✓`,
+        notes: `row=${index}\ncomma, quote="${index}"\r\nunicode=नमस्ते`,
+        tags: [`tag-${index % 5}`, `group-${index % 7}`],
+        project: `Project ${index % 4}`,
+        priority: index % 2 === 0 ? 'high' : 'low',
+        recurrence: index % 3 === 0 ? 'weekly' : 'none'
+      })
+    );
+
+    const imported = csvToTasks(tasksToCsv(tasks));
+    expect(imported).toHaveLength(tasks.length);
+    for (let index = 0; index < tasks.length; index += 1) {
+      expect(imported[index]).toMatchObject({
+        title: tasks[index]?.title,
+        notes: tasks[index]?.notes,
+        tags: tasks[index]?.tags,
+        project: tasks[index]?.project,
+        priority: tasks[index]?.priority,
+        recurrence: tasks[index]?.recurrence,
+        status: tasks[index]?.status
+      });
+    }
+  });
+
   it('accepts a UTF-8 BOM before the first CSV header', () => {
     const csv =
       '\uFEFFtitle,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +

@@ -16,7 +16,8 @@
 - Real release screenshots: **NOT YET CAPTURED**. They must come from a verified browser build using fictional/demo data and must never be fabricated.
 - Current `main` base for this continuation: `4e4850eab204deeb95e4db2bca24f084aaae0d5e` — `docs: update complete RC6 work handoff`.
 - Current hardening branch: `continuation/v0.1-rc7-hardening`.
-- Branch state before this handoff commit: **23 meaningful commits ahead of `main`, 0 behind**.
+- RC7 hardening PR: **#17** — `fix: harden TaskMint v0.1 RC7 persistence and interaction safety`.
+- Branch state before this handoff refresh: **27 meaningful commits ahead of `main`, 0 behind**.
 - Phase status: Phases 0–5 of the master prompt remain substantially implemented. Phase 6 source-level audit/hardening has been extended with pending-action serialization, write-boundary validation, restore preflight validation, bulk duplicate-ID rejection, and fail-closed diagnostic metadata handling.
 
 This file is the authoritative continuation checkpoint. The full previous RC6-era 37 KB handoff was preserved verbatim at:
@@ -39,9 +40,27 @@ At the latest check before this RC7 hardening continuation, its hosted workflows
 - CodeQL run `32227615517` — `queued`, conclusion `null`
 - E2E run `32227615522` — `queued`, conclusion `null`
 
-Queued is **not** success.
+Queued is **not** success. RC6 cannot certify the RC7 source tree.
 
-The RC7 hardening branch now changes application/runtime/test source beyond RC6. Therefore RC6 cannot certify the RC7 tree even if its old runs later complete successfully. After the hardening branch is successfully verified and merged, create a fresh exact-`main` verification candidate for release evidence.
+### RC7 hardening — PR #17
+
+PR #17 was opened from `continuation/v0.1-rc7-hardening` to `main`.
+
+The first PR head was:
+
+- `6ffd48d853def05424dc94659e8c6622637abf8e`
+
+GitHub attached fresh hosted runs to that head:
+
+- E2E run `32236521742` — `queued`, conclusion `null`
+- CI run `32236521744` — `queued`, conclusion `null`
+- CodeQL run `32236521776` — `queued`, conclusion `null`
+
+A subsequent static privacy audit found and fixed an identifier-key allowlist edge, and an additional typed-error regression test was added. Therefore the `6ffd48d8...` run set is now stale for the current PR head even if it later succeeds.
+
+After this handoff refresh changes the PR head again, only fresh hosted runs associated with the resulting exact head SHA can verify PR #17.
+
+Do **not** merge PR #17 merely because GitHub reports it mergeable. Require explicit successful CI, E2E, and CodeQL conclusions for the exact current head.
 
 ## RC7 deep hardening completed in this continuation
 
@@ -120,16 +139,28 @@ Commits:
 - `a0760bd2610e10ebcacd23196c722bf6d1c1ef67` — `fix: preflight backup restores before clearing data`
 - `1e1533aa64b06345ad4140ad35a4ac838a55e279` — `test: verify restore preflight is non-destructive`
 
-### 5. Development event metadata now fails closed
+### 5. Development event metadata now fails closed with an explicit identifier-key allowlist
 
 The previous `logEvent` implementation redacted known sensitive key names, but an arbitrary string or nested object under an unrecognized key could still contain user task content.
+
+The first RC7 hardening pass retained strings whenever a key matched `/id$/i`. A deeper static review found that ordinary words such as `valid` and `grid` also end with the letters `id`, so that pattern was too permissive.
 
 `src/utils/logger.ts` now keeps only explicitly safe diagnostic shapes:
 
 - `null`
 - booleans
 - numbers
-- strings only when the key ends with `id` and the value matches the restricted identifier pattern `[A-Za-z0-9._:-]{1,128}`
+- identifier strings only when both the key and value match restricted identifier patterns
+
+Allowed identifier key forms are intentionally narrow:
+
+- `id`
+- camel/Pascal-style `...Id` or `...ID`
+- snake-case `..._id`
+
+Identifier values must match:
+
+- `[A-Za-z0-9._:-]{1,128}`
 
 Everything else is replaced with `[REDACTED]`, including:
 
@@ -138,6 +169,7 @@ Everything else is replaced with `[REDACTED]`, including:
 - nested objects
 - known sensitive keys such as title/notes/token/secret/password/cookie/authorization
 - unsafe identifier strings containing spaces/content
+- lookalike ordinary keys such as `valid` and `grid`
 
 `logError` retains the earlier coarse error-kind/stable-code behavior and does not print arbitrary exception messages.
 
@@ -145,6 +177,8 @@ Commits:
 
 - `6509c65f55341e1f795856a170106ed4d8775750` — `fix: fail closed for diagnostic event metadata`
 - `0b35e5e5fb3fd232e4e27212a9cf29db80f30e2f` — `test: cover fail-closed event metadata logging`
+- `4d6db22f67dc417da529c8bea5dca224240373fe` — `security: restrict diagnostic identifier keys`
+- `1979d2e240e33fb2170f9bf121938bcc64802f94` — `test: reject lookalike diagnostic id keys`
 
 ### 6. Bulk persistence rejects duplicate task IDs
 
@@ -160,11 +194,14 @@ Repository batch validation now:
 2. checks the complete ID set
 3. rejects a duplicate before opening the transaction
 
+The typed error contract now also has a direct regression that verifies its stable code, message, and structured `id` detail.
+
 Commits:
 
 - `1605716279fc27e9fe2e7f1c6db93fb3e5fcfc23` — `refactor: add duplicate task batch error`
 - `5970f334d9cea0653002af3ac11059a1578e0beb` — `fix: reject duplicate ids in task batches`
 - `58adbdcf6bcc41e078e2cf34b8eaa438bcc322e8` — `test: reject duplicate ids before bulk persistence`
+- `67d4ff739869d3b69a0238b965b3e4848c94fb94` — `test: cover duplicate task batch error contract`
 
 ### 7. Settings/data operations are serialized
 
@@ -232,16 +269,15 @@ Commit:
 - pending-operation serialization
 - new component regressions
 
-`CHANGELOG.md` now records the same runtime/test changes under Unreleased and explicitly keeps release promotion gated on current-tree verification.
+`CHANGELOG.md` records the same runtime/test changes under Unreleased and explicitly keeps release promotion gated on current-tree verification.
 
 Commits:
 
 - `da7b7b6d24ab9b6746b32782640e37f34abc75d1` — `docs: record RC7 reliability hardening`
 - `84fc5377defa5dc7ccea13c0614ce077acf5edaa` — `docs: record pending-action and persistence safety fixes`
+- `6ffd48d853def05424dc94659e8c6622637abf8e` — `docs: update authoritative RC7 work handoff`
 
 ## Files changed in the RC7 hardening branch
-
-Before this handoff commit, the branch changed or added these files relative to `main`:
 
 ### Runtime/source
 
@@ -261,6 +297,7 @@ Before this handoff commit, the branch changed or added these files relative to 
 - `tests/SettingsDialog.test.tsx`
 - `tests/TaskComposer.test.tsx`
 - `tests/TaskItem.test.tsx` — new
+- `tests/errors.test.ts`
 - `tests/logger.test.ts`
 - `tests/repository.test.ts`
 
@@ -282,10 +319,12 @@ The current branch adds explicit tests for:
 - repository settings-write validation
 - complete bulk validation before transaction open
 - duplicate task-ID batch rejection before transaction open
+- stable duplicate task-batch typed error contract
 - backup restore validation before destructive transaction open
 - fail-closed event metadata redaction
 - safe identifier metadata retention
 - unsafe identifier/sensitive-key redaction
+- lookalike ordinary `...id` key redaction
 - Settings action serialization
 - Settings busy accessibility state
 - Settings no-dismiss behavior during pending action
@@ -341,13 +380,13 @@ No release claim should treat source review, PR mergeability, queued jobs, or ab
 
 ## Remaining release blockers
 
-1. **Verify this RC7 hardening branch**
-   - Open a PR to `main`.
-   - Require hosted CI, E2E, and CodeQL to reach explicit successful conclusions for the exact head SHA.
-   - If a job fails, inspect the real failing log and fix that proven failure.
+1. **Verify PR #17 on its exact current head**
+   - Require hosted CI, E2E, and CodeQL to reach explicit successful conclusions.
+   - If a job fails, inspect the real failing job/log and fix the proven defect.
+   - Any run attached to an older head is stale after a new commit.
 
 2. **Merge only after current-tree verification**
-   - Do not use stale RC6 results as evidence for this branch.
+   - Do not use stale RC6 or stale earlier-RC7 results as evidence.
    - After merge, create a fresh exact-`main` verification candidate because merge SHA/main may differ from the source PR head depending on merge method.
 
 3. **Generate the real npm lockfile**
@@ -392,7 +431,7 @@ No release claim should treat source review, PR mergeability, queued jobs, or ab
 ## Next continuation instruction
 
 1. Read this file first; use the archived RC6 handoff only when deeper prior history is needed.
-2. Check the RC7 hardening PR and exact head workflow runs.
+2. Check PR #17 and workflow runs for its exact current head SHA.
 3. Do not call queued/pending/cancelled/stale checks successful.
 4. Fix only proven CI/E2E/CodeQL failures or additional concrete reliability defects found by source audit.
 5. Keep commits atomic and meaningful; do not create fake churn merely to increase count.

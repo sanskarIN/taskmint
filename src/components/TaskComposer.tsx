@@ -22,7 +22,10 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!editingTask) return;
+    if (!editingTask) {
+      reset();
+      return;
+    }
     setTitle(editingTask.title);
     setNotes(editingTask.notes);
     setPriority(editingTask.priority);
@@ -32,6 +35,7 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
     setProject(editingTask.project);
     setRecurrence(editingTask.recurrence);
     setExpanded(true);
+    setError('');
   }, [editingTask]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,11 +48,14 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
         priority,
         dueDate: dueDate || null,
         reminderAt: reminderAt || null,
-        tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        tags: tags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
         project,
         recurrence
       });
-      if (!editingTask) reset();
+      reset();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the task.');
     }
@@ -73,9 +80,15 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
   }
 
   return (
-    <form className="composer card" onSubmit={handleSubmit} aria-label={editingTask ? strings.editTask : strings.addTask}>
+    <form
+      className="composer card"
+      onSubmit={handleSubmit}
+      aria-label={editingTask ? strings.editTask : strings.addTask}
+    >
       <div className="composer-main">
-        <label className="sr-only" htmlFor={`${formId}-title`}>Task title</label>
+        <label className="sr-only" htmlFor={`${formId}-title`}>
+          Task title
+        </label>
         <input
           id={`${formId}-title`}
           className="title-input"
@@ -87,26 +100,87 @@ export function TaskComposer({ editingTask = null, onSubmit, onCancelEdit }: Pro
           required
           autoComplete="off"
         />
-        <button className="primary" type="submit">{editingTask ? strings.saveChanges : strings.addTask}</button>
+        <button className="primary" type="submit">
+          {editingTask ? strings.saveChanges : strings.addTask}
+        </button>
       </div>
 
       {expanded && (
         <div className="composer-details">
-          <label>Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={20000} rows={3} /></label>
-          <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value as TaskDraft['priority'])}>
-            <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
-          </select></label>
-          <label>Due date<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
-          <label>Reminder<input type="datetime-local" value={reminderAt} onChange={(event) => setReminderAt(event.target.value)} /></label>
-          <label>Project<input value={project} onChange={(event) => setProject(event.target.value)} maxLength={80} placeholder="e.g. School" /></label>
-          <label>Tags<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="study, important" /></label>
-          <label>Repeat<select value={recurrence} onChange={(event) => setRecurrence(event.target.value as Recurrence)}>
-            <option value="none">Never</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option>
-          </select></label>
-          {editingTask && <button type="button" className="ghost" onClick={cancelEdit}>{strings.cancel}</button>}
+          <label>
+            Notes
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              maxLength={20000}
+              rows={3}
+            />
+          </label>
+          <label>
+            Priority
+            <select
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as TaskDraft['priority'])}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </label>
+          <label>
+            Due date
+            <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+          </label>
+          <label>
+            Reminder
+            <input
+              type="datetime-local"
+              value={reminderAt}
+              onChange={(event) => setReminderAt(event.target.value)}
+            />
+          </label>
+          <label>
+            Project
+            <input
+              value={project}
+              onChange={(event) => setProject(event.target.value)}
+              maxLength={80}
+              placeholder="e.g. School"
+            />
+          </label>
+          <label>
+            Tags
+            <input
+              value={tags}
+              onChange={(event) => setTags(event.target.value)}
+              placeholder="study, important"
+            />
+          </label>
+          <label>
+            Repeat
+            <select
+              value={recurrence}
+              onChange={(event) => setRecurrence(event.target.value as Recurrence)}
+            >
+              <option value="none">Never</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
+          {editingTask && (
+            <button type="button" className="ghost" onClick={cancelEdit}>
+              {strings.cancel}
+            </button>
+          )}
         </div>
       )}
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

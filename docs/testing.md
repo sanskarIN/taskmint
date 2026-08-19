@@ -6,7 +6,7 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 
 `tests/task.test.ts` covers:
 
-- title and tag normalization
+- title and locale-independent tag normalization
 - task field/count limits
 - invalid calendar-date rejection
 - recurrence boundaries and month-end clamping
@@ -14,9 +14,10 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - deterministic recurring-task ordering
 - visible-slot task reordering
 - smart-view filtering
+- date rollover from Today to Overdue
 - productivity statistics
 
-`tests/errors.test.ts` covers typed `TaskMintError` codes, safe default messages, malformed-JSON wrapping, row-aware CSV errors, and immutable structured error details.
+`tests/errors.test.ts` covers typed `TaskMintError` codes, safe default messages, malformed-JSON wrapping, row-aware CSV errors, immutable structured error details, and the UI boundary that hides unknown infrastructure messages.
 
 `tests/keyboard.test.ts` covers global shortcut resolution, modifier handling, editable-control protection, and modal blocking.
 
@@ -39,9 +40,13 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - malformed enum/date rejection
 - duplicate CSV-column rejection
 
+`tests/download.test.ts` verifies that export download clicks occur before object-URL cleanup and that cleanup is deferred to the next timer turn for browser compatibility.
+
 ## Component
 
 `tests/TaskComposer.test.tsx` exercises accessible form behavior and guards against stale edit values through Testing Library.
+
+`src/test/setup.ts` performs shared Testing Library cleanup, restores real timers, clears mocks, un-stubs globals, and restores spies after every test so state cannot leak between cases.
 
 ## End to end
 

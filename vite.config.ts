@@ -15,7 +15,7 @@ export default defineConfig({
     },
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['taskmint-icon.svg'],
       manifest: {
         name: 'TaskMint',

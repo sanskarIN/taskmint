@@ -1,3 +1,4 @@
+import { TASK_LIMITS } from './limits';
 import type {
   ProductivityStats,
   Recurrence,
@@ -15,20 +16,17 @@ const priorityRank: Record<Task['priority'], number> = {
 };
 
 export function createTask(draft: TaskDraft, now = new Date(), order = Date.now()): Task {
-  const title = normalizeTitle(draft.title);
-  if (!title) throw new Error('Task title is required.');
-  if (title.length > 240) throw new Error('Task title must be 240 characters or fewer.');
-
+  if (!Number.isFinite(order)) throw new Error('Task order must be a finite number.');
   const iso = now.toISOString();
   return {
     id: createId(),
-    title,
-    notes: (draft.notes ?? '').trim(),
+    title: normalizeTitle(draft.title),
+    notes: normalizeNotes(draft.notes),
     priority: draft.priority ?? 'medium',
     dueDate: normalizeDate(draft.dueDate),
     reminderAt: normalizeDateTime(draft.reminderAt),
     tags: normalizeTags(draft.tags ?? []),
-    project: (draft.project ?? '').trim().slice(0, 80),
+    project: normalizeProject(draft.project),
     recurrence: draft.recurrence ?? 'none',
     status: 'active',
     completedAt: null,
@@ -40,17 +38,15 @@ export function createTask(draft: TaskDraft, now = new Date(), order = Date.now(
 }
 
 export function updateTask(task: Task, draft: TaskDraft, now = new Date()): Task {
-  const title = normalizeTitle(draft.title);
-  if (!title) throw new Error('Task title is required.');
   return {
     ...task,
-    title: title.slice(0, 240),
-    notes: (draft.notes ?? '').trim(),
+    title: normalizeTitle(draft.title),
+    notes: normalizeNotes(draft.notes),
     priority: draft.priority ?? task.priority,
     dueDate: normalizeDate(draft.dueDate),
     reminderAt: normalizeDateTime(draft.reminderAt),
     tags: normalizeTags(draft.tags ?? []),
-    project: (draft.project ?? '').trim().slice(0, 80),
+    project: normalizeProject(draft.project),
     recurrence: draft.recurrence ?? task.recurrence,
     updatedAt: now.toISOString()
   };
@@ -159,6 +155,31 @@ export function filterAndSortTasks(tasks: Task[], filters: TaskFilters, now = ne
   });
 }
 
+export function reorderVisibleTasks(
+  tasks: Task[],
+  sourceId: string,
+  targetId: string,
+  now = new Date()
+): Task[] {
+  const ordered = [...tasks].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const sourceIndex = ordered.findIndex((task) => task.id === sourceId);
+  const targetIndex = ordered.findIndex((task) => task.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return [];
+
+  const orderSlots = ordered.map((task) => task.order);
+  const reordered = [...ordered];
+  const [source] = reordered.splice(sourceIndex, 1);
+  if (!source) return [];
+  reordered.splice(targetIndex, 0, source);
+  const updatedAt = now.toISOString();
+
+  return reordered.flatMap((task, index) => {
+    const order = orderSlots[index];
+    if (order === undefined || task.order === order) return [];
+    return [{ ...task, order, updatedAt }];
+  });
+}
+
 export function calculateStats(tasks: Task[], now = new Date()): ProductivityStats {
   const today = formatLocalDate(now);
   const sevenDaysAgo = new Date(now);
@@ -216,23 +237,57 @@ function matchesView(task: Task, view: SmartView, today: string): boolean {
 }
 
 function normalizeTitle(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
+  const title = value.replace(/\s+/g, ' ').trim();
+  if (!title) throw new Error('Task title is required.');
+  if (title.length > TASK_LIMITS.title) {
+    throw new Error(`Task title must be ${TASK_LIMITS.title} characters or fewer.`);
+  }
+  return title;
+}
+
+function normalizeNotes(value: string | undefined): string {
+  const notes = (value ?? '').trim();
+  if (notes.length > TASK_LIMITS.notes) {
+    throw new Error(`Task notes must be ${TASK_LIMITS.notes} characters or fewer.`);
+  }
+  return notes;
+}
+
+function normalizeProject(value: string | undefined): string {
+  const project = (value ?? '').trim();
+  if (project.length > TASK_LIMITS.project) {
+    throw new Error(`Project must be ${TASK_LIMITS.project} characters or fewer.`);
+  }
+  return project;
 }
 
 function normalizeDate(value: string | null | undefined): string | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  return formatLocalDate(parseLocalDate(value)) === value ? value : null;
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || formatLocalDate(parseLocalDate(value)) !== value) {
+    throw new Error('Due date is invalid.');
+  }
+  return value;
 }
 
 function normalizeDateTime(value: string | null | undefined): string | null {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  if (Number.isNaN(date.getTime())) throw new Error('Reminder date/time is invalid.');
+  return date.toISOString();
 }
 
 function normalizeTags(tags: string[]): string[] {
   const normalized = tags.map((tag) => tag.trim().toLocaleLowerCase()).filter(Boolean);
-  return [...new Set(normalized)].slice(0, 12).map((tag) => tag.slice(0, 32));
+  for (const tag of normalized) {
+    if (tag.length > TASK_LIMITS.tag) {
+      throw new Error(`Each tag must be ${TASK_LIMITS.tag} characters or fewer.`);
+    }
+  }
+  const unique = [...new Set(normalized)];
+  if (unique.length > TASK_LIMITS.tags) {
+    throw new Error(`A task can have at most ${TASK_LIMITS.tags} tags.`);
+  }
+  return unique;
 }
 
 function parseLocalDate(value: string): Date {

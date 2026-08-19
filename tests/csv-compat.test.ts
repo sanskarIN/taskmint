@@ -23,4 +23,12 @@ describe('CSV encoding compatibility', () => {
 
     expect(() => csvToTasks(csv)).toThrow(/row 2.*invalid structured tag field/i);
   });
+
+  it('rejects unknown non-empty TaskMint encoding versions', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status,taskmintEncoding\r\n' +
+      'Future encoding,,medium,,,json:["tag"],,none,active,safe-text-v99';
+
+    expect(() => csvToTasks(csv)).toThrow(/row 2.*unsupported TaskMint encoding/i);
+  });
 });

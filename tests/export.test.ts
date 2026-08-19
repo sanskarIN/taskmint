@@ -22,12 +22,25 @@ describe('data portability', () => {
     expect(imported[0]?.tags).toEqual(['home', 'errand']);
   });
 
+  it('round-trips tags that contain the legacy pipe delimiter', () => {
+    const task = createTask({ title: 'Delimiter-safe tags', tags: ['ci|cd', 'release'] });
+    const imported = csvToTasks(tasksToCsv([task]));
+    expect(imported[0]?.tags).toEqual(['ci|cd', 'release']);
+  });
+
+  it('keeps importing legacy pipe-separated tag exports', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      'Legacy tags,,medium,,,home|errand,,none,active';
+    expect(csvToTasks(csv)[0]?.tags).toEqual(['home', 'errand']);
+  });
+
   it('round-trips a deterministic stress set of CSV text edge cases', () => {
     const tasks = Array.from({ length: 64 }, (_, index) =>
       createTask({
         title: `Task ${index}, "quoted" ✓`,
         notes: `row=${index}\ncomma, quote="${index}"\r\nunicode=नमस्ते`,
-        tags: [`tag-${index % 5}`, `group-${index % 7}`],
+        tags: [`tag-${index % 5}|pipe`, `group-${index % 7}`],
         project: `Project ${index % 4}`,
         priority: index % 2 === 0 ? 'high' : 'low',
         recurrence: index % 3 === 0 ? 'weekly' : 'none'

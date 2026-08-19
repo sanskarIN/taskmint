@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import type { Priority, SortMode } from '../domain/types';
 import { strings } from '../i18n/en';
 
@@ -7,23 +8,40 @@ interface Props {
   tag: string;
   sort: SortMode;
   tags: string[];
+  searchInputRef?: Ref<HTMLInputElement>;
   onSearch: (value: string) => void;
   onPriority: (value: Priority | 'all') => void;
   onTag: (value: string) => void;
   onSort: (value: SortMode) => void;
 }
 
-export function Toolbar({ search, priority, tag, sort, tags, onSearch, onPriority, onTag, onSort }: Props) {
+export function Toolbar({
+  search,
+  priority,
+  tag,
+  sort,
+  tags,
+  searchInputRef,
+  onSearch,
+  onPriority,
+  onTag,
+  onSort
+}: Props) {
   return (
-    <div className="toolbar card" aria-label="Search and filters">
+    <div className="toolbar card" aria-label={strings.searchFiltersLabel}>
       <label className="search-field">
         <span className="sr-only">{strings.search}</span>
         <input
+          ref={searchInputRef}
           type="search"
           value={search}
           onChange={(event) => onSearch(event.target.value)}
           placeholder={strings.searchPlaceholder}
+          aria-keyshortcuts="Control+K Meta+K"
         />
+        <span className="shortcut-hint" aria-hidden="true">
+          {strings.searchShortcutHint}
+        </span>
       </label>
       <label>
         {strings.priority}

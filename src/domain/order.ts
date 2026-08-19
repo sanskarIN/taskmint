@@ -1,3 +1,4 @@
+import { fail } from './errors';
 import type { Task } from './types';
 
 export function compareTaskOrder(
@@ -8,6 +9,7 @@ export function compareTaskOrder(
 }
 
 export function normalizeDuplicateTaskOrders(tasks: Task[], step = 1000): Task[] {
+  if (!Number.isSafeInteger(step) || step <= 0) fail('task-order-invalid');
   const seen = new Set<number>();
   let hasDuplicate = false;
   for (const task of tasks) {
@@ -28,9 +30,13 @@ export function normalizeDuplicateTaskOrders(tasks: Task[], step = 1000): Task[]
 }
 
 export function nextTaskOrder(tasks: ReadonlyArray<Pick<Task, 'order'>>, step = 1000): number {
+  if (!Number.isSafeInteger(step) || step <= 0) fail('task-order-invalid');
   let maximum = 0;
   for (const task of tasks) {
+    if (!Number.isSafeInteger(task.order)) fail('task-order-invalid');
     if (task.order > maximum) maximum = task.order;
   }
-  return maximum + step;
+  const next = maximum + step;
+  if (!Number.isSafeInteger(next)) fail('task-order-invalid');
+  return next;
 }

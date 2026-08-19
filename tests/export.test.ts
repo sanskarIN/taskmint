@@ -35,6 +35,49 @@ describe('data portability', () => {
     expect(csvToTasks(csv)[0]?.tags).toEqual(['home', 'errand']);
   });
 
+  it('neutralizes spreadsheet-formula prefixes while preserving TaskMint round trips', () => {
+    const task = createTask({
+      title: '=1+1',
+      notes: '@SUM(A1:A2)',
+      project: '+release',
+      tags: ['safe']
+    });
+    const csv = tasksToCsv([task]);
+    expect(csv).toContain("'=1+1");
+    expect(csv).toContain("'@SUM(A1:A2)");
+    expect(csv).toContain("'+release");
+    expect(csvToTasks(csv)[0]).toMatchObject({
+      title: task.title,
+      notes: task.notes,
+      project: task.project
+    });
+  });
+
+  it('round-trips leading apostrophes under spreadsheet-safe encoding', () => {
+    const task = createTask({
+      title: "'=literal formula text",
+      notes: "'@literal note",
+      project: "'+literal project"
+    });
+    const imported = csvToTasks(tasksToCsv([task]));
+    expect(imported[0]).toMatchObject({
+      title: task.title,
+      notes: task.notes,
+      project: task.project
+    });
+  });
+
+  it('does not reinterpret spreadsheet escapes in legacy CSV files', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      "'=legacy,'@note,medium,,,home,'+project,none,active";
+    expect(csvToTasks(csv)[0]).toMatchObject({
+      title: "'=legacy",
+      notes: "'@note",
+      project: "'+project"
+    });
+  });
+
   it('round-trips a deterministic stress set of CSV text edge cases', () => {
     const tasks = Array.from({ length: 64 }, (_, index) =>
       createTask({

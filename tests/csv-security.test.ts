@@ -3,7 +3,7 @@ import { createTask } from '../src/domain/task';
 import { csvToTasks, tasksToCsv } from '../src/utils/export';
 
 describe('CSV spreadsheet text safety', () => {
-  it('neutralizes formulas after leading whitespace and restores exact TaskMint text', () => {
+  it('neutralizes formulas after leading whitespace before normal CSV task normalization', () => {
     const task = createTask({ title: 'Safe title', notes: 'temporary' });
     const restoredLikeTask = {
       ...task,

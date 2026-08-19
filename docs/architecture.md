@@ -12,15 +12,21 @@ Task limits are centralized in `src/domain/limits.ts` so interactive creation, J
 
 `src/domain/errors.ts` owns stable `TaskMintError` codes and default safe messages. Domain and import modules throw those typed errors instead of inventing independent validation strings. Structured details such as row number, field name, task ID, and maximum length are carried separately from the code.
 
+`src/domain/order.ts` allocates the next manual order with an iterative scan rather than spreading the entire task list into `Math.max`. This keeps new-task ordering safe at the application's large import boundary without changing ordering semantics.
+
 ### Persistence — `src/storage/`
 
 Dexie wraps IndexedDB. `TaskMintDatabase` owns versioned schemas and migrations. `TaskRepository` exposes application-oriented operations and keeps transactions out of UI components.
 
 Schema v2 indexes task identifiers, status, due/reminder dates, project, priority, order, timestamps, and multi-entry tags. Schema upgrades initialize fields introduced after v1.
 
+Every multi-task `putTasks` call executes inside an explicit Dexie read-write transaction. This is important because a bare `bulkPut` can otherwise persist successful rows even when another row in the same batch fails. Imports, recurring completion, and reordering therefore use all-or-nothing batch persistence.
+
 ### Utilities — `src/utils/`
 
 Data import/export, keyboard shortcut resolution, local browser notifications, and development logging are isolated utilities. Imported data is treated as untrusted and validated before replacing or appending local state.
+
+CSV exports use a version marker for reversible spreadsheet-safe text encoding and a structured `json:` tag representation. Imports still accept the earlier pipe-separated tag representation for backwards compatibility but reject malformed new structured payloads.
 
 ### Localization — `src/i18n/`
 
@@ -34,12 +40,12 @@ Reusable accessible components render the application. `App.tsx` wires domain op
 
 1. UI emits a typed `TaskDraft` or lifecycle action.
 2. Domain functions validate/normalize and create immutable task values or a typed `TaskMintError`.
-3. Repository writes to IndexedDB.
+3. Repository writes to IndexedDB; multi-task operations are explicitly transactional.
 4. React state updates only after persistence succeeds.
 5. Filters/statistics are derived in memory from the current task set.
 6. The matching result set is sliced to the current progressive-render limit before task cards mount.
 
-This ordering avoids showing successful state that was not actually persisted and prevents very large imports from mounting every matching card at once.
+This ordering avoids showing successful state that was not actually persisted, avoids partial multi-task writes, and prevents very large imports from mounting every matching card at once.
 
 ## Offline model
 

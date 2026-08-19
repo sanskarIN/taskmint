@@ -52,7 +52,7 @@ export function SettingsDialog({
     try {
       await action();
     } catch {
-      setActionError('That setting could not be saved. Your existing local data was left in place.');
+      setActionError(strings.settingsSaveError);
     }
   }
 
@@ -112,7 +112,7 @@ export function SettingsDialog({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">TaskMint</p>
+            <p className="eyebrow">{strings.appName}</p>
             <h2 id="settings-title">{strings.settings}</h2>
           </div>
           <button
@@ -120,7 +120,7 @@ export function SettingsDialog({
             className="icon-button"
             type="button"
             onClick={onClose}
-            aria-label="Close settings"
+            aria-label={strings.closeSettings}
           >
             ×
           </button>
@@ -133,9 +133,9 @@ export function SettingsDialog({
         )}
 
         <div className="settings-section">
-          <h3>Appearance & accessibility</h3>
+          <h3>{strings.appearanceAccessibility}</h3>
           <label>
-            Theme
+            {strings.theme}
             <select
               value={settings.theme}
               onChange={(event) =>
@@ -144,9 +144,9 @@ export function SettingsDialog({
                 )
               }
             >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              <option value="system">{strings.themeSystem}</option>
+              <option value="light">{strings.themeLight}</option>
+              <option value="dark">{strings.themeDark}</option>
             </select>
           </label>
           <label className="checkbox-row">
@@ -159,42 +159,37 @@ export function SettingsDialog({
                 )
               }
             />
-            Reduce motion
+            {strings.reduceMotion}
           </label>
         </div>
 
         <div className="settings-section">
-          <h3>Reminders</h3>
-          <p className="muted">
-            Browser notifications are optional and only requested after you choose to enable them.
-          </p>
+          <h3>{strings.reminders}</h3>
+          <p className="muted">{strings.remindersDescription}</p>
           <button
             type="button"
             className="secondary"
             onClick={() => void runAction(onEnableNotifications)}
           >
-            Enable browser notifications
+            {strings.enableBrowserNotifications}
           </button>
         </div>
 
         <div className="settings-section">
-          <h3>Data & privacy</h3>
-          <p className="muted">
-            Your tasks are stored locally in this browser using IndexedDB. TaskMint does not require
-            an account or server.
-          </p>
+          <h3>{strings.dataPrivacy}</h3>
+          <p className="muted">{strings.dataPrivacyDescription}</p>
           <div className="button-row">
             <button type="button" className="secondary" onClick={onExportJson}>
-              Backup JSON
+              {strings.backupJson}
             </button>
             <button type="button" className="secondary" onClick={onExportCsv}>
-              Export CSV
+              {strings.exportCsv}
             </button>
             <button type="button" className="secondary" onClick={() => jsonInput.current?.click()}>
-              Restore JSON
+              {strings.restoreJson}
             </button>
             <button type="button" className="secondary" onClick={() => csvInput.current?.click()}>
-              Import CSV
+              {strings.importCsv}
             </button>
           </div>
           <input
@@ -218,37 +213,34 @@ export function SettingsDialog({
             className="danger secondary"
             onClick={() => void runAction(onDeleteAll)}
           >
-            Delete all local data
+            {strings.deleteAllLocalData}
           </button>
         </div>
 
         <div className="settings-section">
-          <h3>Updates</h3>
-          <p className="muted">
-            Installed PWA assets update automatically when a new service worker becomes available.
-            Reload to activate any update already waiting in this browser.
-          </p>
+          <h3>{strings.updates}</h3>
+          <p className="muted">{strings.updatesDescription}</p>
           <button type="button" className="secondary" onClick={() => window.location.reload()}>
-            Reload TaskMint
+            {strings.reloadTaskMint}
           </button>
         </div>
 
         <div className="settings-section about-section">
-          <h3>About</h3>
+          <h3>{strings.about}</h3>
           <p>
-            <strong>TaskMint v{APP_VERSION}</strong> · MIT License
+            <strong>{strings.appName} v{APP_VERSION}</strong> · {strings.mitLicense}
           </p>
           <p>{strings.madeBy}</p>
           <div className="link-list">
             <a href="https://github.com/sanskarIN" target="_blank" rel="noreferrer">
-              GitHub
+              {strings.github}
             </a>
             <a href="https://buymeacoffee.com/sanskarIN" target="_blank" rel="noreferrer">
-              Buy Me a Coffee
+              {strings.buyMeACoffee}
             </a>
             <a href="mailto:sanskarin@outlook.in">sanskarin@outlook.in</a>
             <a href="mailto:sanskarin.business@gmail.com">sanskarin.business@gmail.com</a>
-            <a href="mailto:supportramsandesh@gmail.com">Support</a>
+            <a href="mailto:supportramsandesh@gmail.com">{strings.support}</a>
           </div>
         </div>
       </section>

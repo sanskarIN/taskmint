@@ -411,7 +411,7 @@ export default function App() {
 
   async function importCsv(file: File) {
     try {
-      const imported = csvToTasks(await readFile(file));
+      const imported = csvToTasks(await readFile(file), nextTaskOrder(tasks));
       await repository.putTasks(imported);
       setTasks((current) => [...current, ...imported]);
       setToast({ message: strings.importedTasks(imported.length) });

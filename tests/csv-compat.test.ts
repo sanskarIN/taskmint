@@ -21,6 +21,6 @@ describe('CSV encoding compatibility', () => {
       'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status,taskmintEncoding\r\n' +
       'Broken tags,,medium,,,json:not-json,,none,active,safe-text-v1';
 
-    expect(() => csvToTasks(csv)).toThrow(/row 2.*tag encoding/i);
+    expect(() => csvToTasks(csv)).toThrow(/row 2.*invalid structured tag field/i);
   });
 });

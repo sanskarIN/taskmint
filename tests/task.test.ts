@@ -4,8 +4,10 @@ import {
   calculateStats,
   completeTask,
   createTask,
-  filterAndSortTasks
+  filterAndSortTasks,
+  reorderVisibleTasks
 } from '../src/domain/task';
+import { TASK_LIMITS } from '../src/domain/limits';
 import type { TaskFilters } from '../src/domain/types';
 
 const filters: TaskFilters = {
@@ -49,9 +51,25 @@ describe('task domain', () => {
     expect(result.next?.dueDate).toBe('2026-08-26');
   });
 
-  it('drops impossible calendar dates during normalization', () => {
-    const task = createTask({ title: 'Calendar edge', dueDate: '2026-02-31' });
-    expect(task.dueDate).toBeNull();
+  it('rejects impossible calendar dates instead of dropping them silently', () => {
+    expect(() => createTask({ title: 'Calendar edge', dueDate: '2026-02-31' })).toThrow(
+      /due date is invalid/i
+    );
+  });
+
+  it('rejects oversized task content instead of truncating it', () => {
+    expect(() =>
+      createTask({ title: 'Long notes', notes: 'x'.repeat(TASK_LIMITS.notes + 1) })
+    ).toThrow(/notes/i);
+    expect(() =>
+      createTask({
+        title: 'Too many tags',
+        tags: Array.from({ length: TASK_LIMITS.tags + 1 }, (_, index) => `tag-${index}`)
+      })
+    ).toThrow(/at most/i);
+    expect(() =>
+      createTask({ title: 'Long tag', tags: ['x'.repeat(TASK_LIMITS.tag + 1)] })
+    ).toThrow(/each tag/i);
   });
 
   it('carries recurring reminders forward without a due date', () => {
@@ -68,6 +86,19 @@ describe('task domain', () => {
     const result = completeTask(original, now);
     expect(result.next?.reminderAt).toBe('2026-08-20T09:30:00.000Z');
     expect(result.next?.order).toBe(now.getTime());
+  });
+
+  it('reorders only the supplied visible task slots', () => {
+    const now = new Date('2026-08-19T12:00:00.000Z');
+    const first = createTask({ title: 'First' }, now, 1000);
+    const second = createTask({ title: 'Second' }, now, 3000);
+    const third = createTask({ title: 'Third' }, now, 5000);
+    const changed = reorderVisibleTasks([first, second, third], third.id, first.id, now);
+    const byId = new Map(changed.map((task) => [task.id, task]));
+    expect(byId.get(third.id)?.order).toBe(1000);
+    expect(byId.get(first.id)?.order).toBe(3000);
+    expect(byId.get(second.id)?.order).toBe(5000);
+    expect(changed.every((task) => task.updatedAt === now.toISOString())).toBe(true);
   });
 
   it('filters by smart view and computes useful statistics', () => {

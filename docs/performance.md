@@ -9,6 +9,7 @@ TaskMint is designed to keep normal operations local and inexpensive.
 - Keep production JavaScript small enough that bundle growth is reviewed in pull requests.
 - Avoid synchronous storage loops in render paths.
 - Keep the number of rendered task cards bounded even when imports contain very large datasets.
+- Treat 10,000-task in-memory filtering/statistics as a repeatable benchmark workload, not as a hard wall-clock CI threshold.
 
 ## Current design choices
 
@@ -20,6 +21,21 @@ TaskMint is designed to keep normal operations local and inexpensive.
 - IndexedDB indexes support primary status/date/project/tag lookups and migrations are explicit.
 - Persistence uses bulk operations for reorder/import paths.
 - Service-worker caching reduces repeat asset downloads.
+
+## Repeatable domain benchmark
+
+`bench/task.bench.ts` builds a deterministic 10,000-task corpus and measures the two current in-memory hot paths:
+
+- `filterAndSortTasks(...)`
+- `calculateStats(...)`
+
+Run it with:
+
+```bash
+npm run bench
+```
+
+Benchmark results are intentionally non-gating because wall-clock throughput varies with CPU, operating system, browser/runtime load, and CI runner contention. Use the same machine/runtime when comparing changes and record meaningful regressions or improvements in the pull request rather than treating one absolute duration as universally valid.
 
 ## Large-list validation
 

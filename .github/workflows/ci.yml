@@ -32,6 +32,8 @@ jobs:
         run: npm run format:check
       - name: Documentation links
         run: npm run docs:check
+      - name: Documentation inventory
+        run: npm run docs:inventory
       - name: Secret patterns
         run: npm run secrets:check
       - name: Lint

@@ -110,6 +110,23 @@ describe('task domain', () => {
     expect(changed.every((task) => task.updatedAt === now.toISOString())).toBe(true);
   });
 
+  it('moves a due-today task into overdue after the date advances', () => {
+    const task = createTask(
+      { title: 'Date rollover', dueDate: '2026-08-19' },
+      new Date(2026, 7, 19, 12),
+      1000
+    );
+    expect(
+      filterAndSortTasks([task], { ...filters, view: 'today' }, new Date(2026, 7, 19, 23, 59))
+    ).toHaveLength(1);
+    expect(
+      filterAndSortTasks([task], { ...filters, view: 'today' }, new Date(2026, 7, 20, 0, 1))
+    ).toHaveLength(0);
+    expect(
+      filterAndSortTasks([task], { ...filters, view: 'overdue' }, new Date(2026, 7, 20, 0, 1))
+    ).toHaveLength(1);
+  });
+
   it('filters by smart view and computes useful statistics', () => {
     const now = new Date(2026, 7, 19, 12);
     const dueToday = createTask({ title: 'Today', dueDate: '2026-08-19' }, now, 10);

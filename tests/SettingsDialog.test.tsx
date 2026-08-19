@@ -71,6 +71,37 @@ describe('SettingsDialog', () => {
     });
   });
 
+  it('clears the chosen import value before asynchronous import work settles', async () => {
+    const props = baseProps();
+    let resolveImport: (() => void) | undefined;
+    props.onImportJson.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveImport = resolve;
+      })
+    );
+    const { container } = render(<SettingsDialog {...props} />);
+    const input = container.querySelector<HTMLInputElement>('input[accept="application/json,.json"]');
+    if (!input) throw new Error('JSON import input was not rendered.');
+    const file = new File(['{}'], 'backup.json', { type: 'application/json' });
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      writable: true,
+      value: 'C:\\fakepath\\backup.json'
+    });
+
+    fireEvent.change(input);
+
+    expect(props.onImportJson).toHaveBeenCalledWith(file);
+    expect(input.value).toBe('');
+    expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('true');
+
+    resolveImport?.();
+    await vi.waitFor(() => {
+      expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('false');
+    });
+  });
+
   it('clears stale action errors after the dialog is closed and reopened', async () => {
     const props = baseProps();
     props.onChange.mockRejectedValueOnce(new Error('simulated settings failure'));

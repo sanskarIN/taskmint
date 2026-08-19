@@ -72,7 +72,7 @@ export function tasksToCsv(tasks: Task[]): string {
   return rows.join('\r\n');
 }
 
-export function csvToTasks(csv: string): Task[] {
+export function csvToTasks(csv: string, firstOrder = Date.now()): Task[] {
   if (csv.length > TASK_LIMITS.importBytes) fail('csv-file-too-large');
   const rows = parseCsv(csv);
   if (rows.length === 0) return [];
@@ -94,7 +94,7 @@ export function csvToTasks(csv: string): Task[] {
     .slice(1)
     .map((row, index) => ({ row, rowNumber: index + 2 }))
     .filter(({ row }) => row.some((cell) => cell.trim() !== ''))
-    .map(({ row, rowNumber }) => parseCsvTask(row, headers, rowNumber));
+    .map(({ row, rowNumber }, index) => parseCsvTask(row, headers, rowNumber, firstOrder + index));
 }
 
 export function downloadText(filename: string, content: string, type: string): void {
@@ -109,7 +109,7 @@ export function downloadText(filename: string, content: string, type: string): v
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task {
+function parseCsvTask(row: string[], headers: string[], rowNumber: number, order: number): Task {
   const value = (name: (typeof csvHeaders)[number]) => row[headers.indexOf(name)] ?? '';
   const encodingIndex = headers.indexOf(csvEncodingHeader);
   const encoding = encodingIndex >= 0 ? (row[encodingIndex] ?? '') : '';
@@ -136,7 +136,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
         recurrence
       },
       now,
-      now.getTime() + rowNumber
+      order
     );
     if (status === 'completed') {
       task.status = 'completed';

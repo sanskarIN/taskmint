@@ -14,8 +14,8 @@ export async function runExclusiveMutation(
   }
 
   lock.current = true;
-  setBusy(true);
   try {
+    setBusy(true);
     await action();
     return true;
   } finally {

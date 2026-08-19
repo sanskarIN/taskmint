@@ -40,6 +40,7 @@ export type TaskMintErrorCode =
   | 'csv-invalid-encoding'
   | 'csv-invalid-tags'
   | 'csv-row-invalid'
+  | 'csv-invalid-quoting'
   | 'csv-unterminated-quote'
   | 'import-file-too-large';
 
@@ -152,6 +153,8 @@ export function errorMessage(code: TaskMintErrorCode, details: TaskMintErrorDeta
       return 'CSV contains an invalid structured tag field.';
     case 'csv-row-invalid':
       return `CSV row ${details.row ?? '?'}: ${details.causeMessage ?? 'Invalid task data.'}`;
+    case 'csv-invalid-quoting':
+      return `CSV row ${details.row ?? '?'} contains invalid quote placement.`;
     case 'csv-unterminated-quote':
       return 'CSV contains an unterminated quoted field.';
     case 'import-file-too-large':

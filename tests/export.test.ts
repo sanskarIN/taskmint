@@ -11,7 +11,11 @@ describe('data portability', () => {
   });
 
   it('round-trips CSV fields containing commas and quotes', () => {
-    const task = createTask({ title: 'Buy, then "check"', notes: 'line one\nline two', tags: ['home', 'errand'] });
+    const task = createTask({
+      title: 'Buy, then "check"',
+      notes: 'line one\nline two',
+      tags: ['home', 'errand']
+    });
     const imported = csvToTasks(tasksToCsv([task]));
     expect(imported[0]?.title).toBe(task.title);
     expect(imported[0]?.notes).toBe(task.notes);
@@ -19,6 +23,30 @@ describe('data portability', () => {
   });
 
   it('rejects unsupported JSON backups', () => {
-    expect(() => parseBackup('{"app":"Other","schemaVersion":2,"tasks":[]}')).toThrow(/unsupported/i);
+    expect(() => parseBackup('{"app":"Other","schemaVersion":2,"tasks":[]}')).toThrow(
+      /unsupported/i
+    );
+  });
+
+  it('rejects duplicate task ids', () => {
+    const task = createTask({ title: 'Unique task' });
+    const duplicateBackup = JSON.stringify({
+      app: 'TaskMint',
+      schemaVersion: 2,
+      exportedAt: new Date().toISOString(),
+      tasks: [task, task]
+    });
+    expect(() => parseBackup(duplicateBackup)).toThrow(/duplicate task id/i);
+  });
+
+  it('rejects malformed task timestamps', () => {
+    const task = { ...createTask({ title: 'Bad reminder' }), reminderAt: 'not-a-date' };
+    const malformedBackup = JSON.stringify({
+      app: 'TaskMint',
+      schemaVersion: 2,
+      exportedAt: new Date().toISOString(),
+      tasks: [task]
+    });
+    expect(() => parseBackup(malformedBackup)).toThrow(/reminderAt/i);
   });
 });

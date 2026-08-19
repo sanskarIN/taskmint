@@ -18,7 +18,9 @@ Do not publish secrets, private task content, exploit details that could put use
 - JSON restore rejects malformed/duplicate task identifiers, invalid enums, impossible dates, malformed timestamps, invalid status/timestamp combinations, invalid numeric order values, and oversized task fields before replacing local data.
 - CSV import requires the complete expected header set, rejects duplicate headers, validates enum/date/task constraints row by row, and rejects unterminated quoted fields rather than silently coercing malformed input.
 - Imported data is rendered through React text contexts; TaskMint does not inject imported task text as HTML.
-- Content Security Policy limits executable/resource origins to the application origin.
+- The committed production Content Security Policy uses `script-src 'self'`, `style-src 'self'`, and `connect-src 'self'`, with `object-src 'none'`, `base-uri 'self'`, and `form-action 'self'`.
+- Vite development-only inline-style/WebSocket allowances are injected only while serving the development app and are not present in the committed production HTML policy.
+- Known validation/import failures use typed `TaskMintError` codes. UI error formatting exposes those safe validation messages but replaces unknown browser/IndexedDB infrastructure errors with generic product copy.
 - Development logs redact common sensitive field names and never intentionally log task titles or notes.
 - Persistence failures are caught before optimistic React state mutation for task lifecycle operations.
 - `npm run secrets:check` scans tracked text paths for common private-key and credential-token formats as a deterministic defense-in-depth CI gate.

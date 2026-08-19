@@ -123,6 +123,16 @@ describe('TaskRepository bulk persistence', () => {
     expect(bulkPut).not.toHaveBeenCalled();
   });
 
+  it('rejects duplicate ids before opening a transaction', async () => {
+    const { repository, bulkPut, transaction } = repositoryHarness();
+    const first = createTask({ title: 'First duplicate' });
+    const second = { ...createTask({ title: 'Second duplicate' }), id: first.id };
+
+    await expect(repository.putTasks([first, second])).rejects.toThrow(/duplicate task id/i);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(bulkPut).not.toHaveBeenCalled();
+  });
+
   it('propagates bulk failures instead of reporting a successful write', async () => {
     const { repository, bulkPut } = repositoryHarness();
     bulkPut.mockRejectedValueOnce(new Error('simulated bulk failure'));

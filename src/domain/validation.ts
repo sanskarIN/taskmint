@@ -1,3 +1,4 @@
+import { parseStrictDateTime } from './datetime';
 import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from './types';
@@ -141,8 +142,8 @@ function nullableTimestamp(value: unknown, field: string): string | null {
 
 function validateTimestamp(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) fail('backup-field-invalid', { field });
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) fail('backup-field-invalid', { field });
+  const date = parseStrictDateTime(value);
+  if (!date) fail('backup-field-invalid', { field });
   return date.toISOString();
 }
 

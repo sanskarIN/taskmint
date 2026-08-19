@@ -36,6 +36,7 @@ export function SettingsDialog({
 
   useEffect(() => {
     if (!open) return;
+    setActionError('');
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const frame = window.requestAnimationFrame(() => closeButton.current?.focus());
@@ -47,12 +48,12 @@ export function SettingsDialog({
 
   if (!open) return null;
 
-  async function runAction(action: () => Promise<void>) {
+  async function runAction(action: () => Promise<void>, failureMessage = strings.settingsSaveError) {
     setActionError('');
     try {
       await action();
     } catch {
-      setActionError(strings.settingsSaveError);
+      setActionError(failureMessage);
     }
   }
 
@@ -179,10 +180,18 @@ export function SettingsDialog({
           <h3>{strings.dataPrivacy}</h3>
           <p className="muted">{strings.dataPrivacyDescription}</p>
           <div className="button-row">
-            <button type="button" className="secondary" onClick={onExportJson}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void runAction(async () => onExportJson(), strings.exportError)}
+            >
               {strings.backupJson}
             </button>
-            <button type="button" className="secondary" onClick={onExportCsv}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void runAction(async () => onExportCsv(), strings.exportError)}
+            >
               {strings.exportCsv}
             </button>
             <button type="button" className="secondary" onClick={() => jsonInput.current?.click()}>

@@ -15,7 +15,8 @@ Use this page as the navigation index.
 
 - `architecture.md` — runtime layers, data flows, failure model, concurrency, PWA, security boundaries.
 - `data-model.md` — Task/Settings/Backup schemas, limits, IndexedDB versions, JSON and CSV contracts.
-- `repository-reference.md` — exhaustive file-by-file repository map.
+- `repository-reference.md` — detailed responsibility/coupling map for repository files and subsystems.
+- `file-index.md` — compact exhaustive tracked-file inventory enforced by `npm run docs:inventory`.
 - `development.md` — contributor implementation rules and change discipline.
 - `adr/` — architecture decision records explaining why major design constraints were chosen.
 
@@ -57,6 +58,23 @@ Current ADRs:
 4. `adr/0004-exclusive-task-mutations.md` — serialize persistence-sensitive user task mutations.
 5. `adr/0005-versioned-data-portability.md` — explicit JSON/CSV compatibility/versioning.
 
+## Documentation completeness guard
+
+TaskMint has two complementary documentation inventories:
+
+- `file-index.md` must contain every tracked path returned by `git ls-files`;
+- `test-matrix.md` must contain every tracked file under `tests/`, `e2e/`, `bench/`, plus `src/test/setup.ts`.
+
+`repository-reference.md` remains the detailed narrative ownership/coupling guide.
+
+Run:
+
+```bash
+npm run docs:inventory
+```
+
+The command is dependency-free Node code and is also part of `npm run check` and the CI quality workflow.
+
 ## Documentation maintenance
 
 Documentation is part of the repository contract.
@@ -64,19 +82,26 @@ Documentation is part of the repository contract.
 When behavior changes:
 
 - update the relevant guide(s);
-- update `repository-reference.md` if files/responsibilities change;
-- update `test-matrix.md` if test files change;
+- update `file-index.md` whenever a tracked file is added/removed/renamed;
+- update `repository-reference.md` when responsibilities/coupling change;
+- update `test-matrix.md` if test/E2E/benchmark files change;
 - update `CHANGELOG.md` for notable behavior;
 - update `what_changed.md` for continuation state;
 - add an ADR for a significant architectural decision rather than rewriting old ADR history.
 
-Validate repository-relative links with:
+Validate repository-relative links:
 
 ```bash
 npm run docs:check
 ```
 
-Validate deterministic text hygiene with:
+Validate complete inventory:
+
+```bash
+npm run docs:inventory
+```
+
+Validate deterministic text hygiene:
 
 ```bash
 npm run format:check

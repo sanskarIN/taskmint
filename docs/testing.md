@@ -1,6 +1,6 @@
 # Testing
 
-TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, and offline behavior as release-critical paths.
+TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, and repository hygiene as release-critical paths.
 
 ## Unit/domain
 
@@ -55,6 +55,14 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
+## Deterministic repository checks
+
+- `npm run format:check` rejects CRLF drift, missing final newlines, and trailing whitespace across tracked text paths.
+- `npm run docs:check` resolves repository-relative Markdown links and rejects links that escape the repository or point to missing local targets.
+- `npm run secrets:check` scans tracked text paths for common private-key and credential-token patterns without sending repository content to a third-party service.
+
+These checks intentionally require only Node.js and can run before npm dependencies are available.
+
 ## CI gates
 
-Pull requests run formatting invariants, linting, type checks, unit/component tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
+Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.

@@ -6,7 +6,9 @@ TaskMint is a client-side modular monolith. It deliberately avoids a backend bec
 
 ### Domain — `src/domain/`
 
-Pure task rules live here: task creation/update, lifecycle transitions, recurrence, smart-view filtering, sorting, statistics, and backup validation. Domain functions accept explicit time values where useful so tests remain deterministic.
+Pure task rules live here: task creation/update, lifecycle transitions, recurrence, smart-view filtering, sorting, statistics, shared data limits, visible-slot ordering, and backup validation. Domain functions accept explicit time values where useful so tests remain deterministic.
+
+Task limits are centralized in `src/domain/limits.ts` so interactive creation, JSON restore, CSV import, and UI affordances do not drift into different constraints.
 
 ### Persistence — `src/storage/`
 
@@ -16,11 +18,15 @@ Schema v2 indexes task identifiers, status, due/reminder dates, project, priorit
 
 ### Utilities — `src/utils/`
 
-Data import/export, local browser notifications, and development logging are isolated utilities. Imported data is treated as untrusted and validated before replacing local state.
+Data import/export, keyboard shortcut resolution, local browser notifications, and development logging are isolated utilities. Imported data is treated as untrusted and validated before replacing or appending local state.
+
+### Localization — `src/i18n/`
+
+Visible English product copy is externalized in `src/i18n/en.ts`, including dynamic labels and status text. English is the only shipped locale in v0.1, but presentation components consume the catalog instead of embedding independent copies of product strings.
 
 ### Presentation — `src/components/` and `src/App.tsx`
 
-Reusable accessible components render the application. `App.tsx` wires domain operations to the repository, tracks selected filters, and coordinates side effects such as theme resolution and reminder checks.
+Reusable accessible components render the application. `App.tsx` wires domain operations to the repository, tracks selected filters, coordinates side effects such as theme resolution and reminder checks, manages global keyboard shortcuts, and progressively renders matching task results in bounded pages.
 
 ## Data flow
 
@@ -29,13 +35,14 @@ Reusable accessible components render the application. `App.tsx` wires domain op
 3. Repository writes to IndexedDB.
 4. React state updates only after persistence succeeds.
 5. Filters/statistics are derived in memory from the current task set.
+6. The matching result set is sliced to the current progressive-render limit before task cards mount.
 
-This ordering avoids showing successful state that was not actually persisted.
+This ordering avoids showing successful state that was not actually persisted and prevents very large imports from mounting every matching card at once.
 
 ## Offline model
 
 Application assets are precached by the generated PWA service worker. Task content lives in IndexedDB. No network request is required for normal task operations.
 
-## Error boundaries
+## Error boundaries and recoverable failures
 
-Expected user/data errors are surfaced near the action or through status toasts. Unexpected render failures are caught by `ErrorBoundary`, which provides a reload path without intentionally mutating stored data.
+Expected validation errors are surfaced in the task form or import status. IndexedDB lifecycle failures are caught before React state changes and surface user-safe status text. Unexpected render failures are caught by `ErrorBoundary`, which provides a reload path without intentionally mutating stored data.

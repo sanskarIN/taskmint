@@ -16,9 +16,13 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - smart-view filtering
 - productivity statistics
 
+`tests/errors.test.ts` covers typed `TaskMintError` codes, safe default messages, malformed-JSON wrapping, row-aware CSV errors, and immutable structured error details.
+
 `tests/keyboard.test.ts` covers global shortcut resolution, modifier handling, editable-control protection, and modal blocking.
 
 `tests/notifications.test.ts` covers successful one-time due-reminder delivery and verifies that a throwing browser `Notification` constructor is isolated instead of escaping the reminder loop.
+
+`tests/security-config.test.ts` locks the committed production CSP to self-restricted scripts/styles/connections and rejects accidental development WebSocket or inline-style allowances in the built HTML source.
 
 ## Data portability
 
@@ -66,3 +70,5 @@ These checks intentionally require only Node.js and can run before npm dependenc
 ## CI gates
 
 Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
+
+Tagged releases rerun the combined local quality suite, high-severity dependency audit, and Chromium E2E before creating the release artifact and checksum.

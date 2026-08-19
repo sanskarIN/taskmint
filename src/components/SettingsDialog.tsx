@@ -75,9 +75,13 @@ export function SettingsDialog({
     event.target.value = '';
   }
 
+  function closeIfIdle() {
+    if (!actionLock.current) onClose();
+  }
+
   function trapFocus(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
-      if (actionBusy) return;
+      if (actionLock.current) return;
       event.preventDefault();
       onClose();
       return;
@@ -109,7 +113,7 @@ export function SettingsDialog({
       className="modal-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (!actionBusy && event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) closeIfIdle();
       }}
     >
       <section
@@ -130,7 +134,7 @@ export function SettingsDialog({
             ref={closeButton}
             className="icon-button"
             type="button"
-            onClick={onClose}
+            onClick={closeIfIdle}
             aria-label={strings.closeSettings}
             disabled={actionBusy}
           >

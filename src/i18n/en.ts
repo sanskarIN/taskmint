@@ -121,7 +121,9 @@ export const strings = {
   support: 'Support',
   fatalTitle: 'TaskMint hit an unexpected error.',
   fatalBody: 'Your locally stored task data has not been intentionally changed.',
-  loadFailed: 'Could not load local data. Try reloading TaskMint.',
+  loadFailed: 'Could not safely load local TaskMint data.',
+  loadFailedBody:
+    'TaskMint stopped before allowing changes. Your existing browser data was left in place; reload after resolving the storage problem.',
   taskUpdated: 'Task updated.',
   taskAdded: 'Task added.',
   taskSavedError: 'Could not save the task to local storage.',

@@ -9,7 +9,7 @@ import { Toolbar } from './components/Toolbar';
 import { TASK_PAGE_SIZE } from './config';
 import { fail } from './domain/errors';
 import { TASK_LIMITS } from './domain/limits';
-import { nextTaskOrder } from './domain/order';
+import { compareTaskOrder, nextTaskOrder } from './domain/order';
 import {
   archiveTask,
   calculateStats,
@@ -54,6 +54,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(TASK_PAGE_SIZE);
@@ -73,7 +74,7 @@ export default function App() {
       })
       .catch((error: unknown) => {
         logError('load_failed', error);
-        setToast({ message: strings.loadFailed });
+        if (!cancelled) setLoadFailed(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -302,7 +303,7 @@ export default function App() {
   async function move(task: Task, direction: -1 | 1) {
     const active = renderedTasks
       .filter((item) => item.status === 'active')
-      .sort((a, b) => a.order - b.order);
+      .sort(compareTaskOrder);
     const index = active.findIndex((item) => item.id === task.id);
     const target = active[index + direction];
     if (!target) return;
@@ -415,6 +416,19 @@ export default function App() {
       <main className="loading-state" aria-busy="true">
         <img src="/taskmint-icon.svg" width="56" height="56" alt="" />
         <p>{strings.loadingLocalTasks}</p>
+      </main>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <main className="fatal-state" role="alert">
+        <img src="/taskmint-icon.svg" width="64" height="64" alt="" />
+        <h1>{strings.loadFailed}</h1>
+        <p>{strings.loadFailedBody}</p>
+        <button className="primary" type="button" onClick={() => window.location.reload()}>
+          {strings.reloadTaskMint}
+        </button>
       </main>
     );
   }

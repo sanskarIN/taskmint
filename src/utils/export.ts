@@ -92,8 +92,9 @@ export function csvToTasks(csv: string): Task[] {
 
   return rows
     .slice(1)
-    .filter((row) => row.some((cell) => cell.trim() !== ''))
-    .map((row, index) => parseCsvTask(row, headers, index + 2));
+    .map((row, index) => ({ row, rowNumber: index + 2 }))
+    .filter(({ row }) => row.some((cell) => cell.trim() !== ''))
+    .map(({ row, rowNumber }) => parseCsvTask(row, headers, rowNumber));
 }
 
 export function downloadText(filename: string, content: string, type: string): void {

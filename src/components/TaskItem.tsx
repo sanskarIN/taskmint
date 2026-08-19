@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import type { Priority, Recurrence, Task } from '../domain/types';
 import { strings } from '../i18n/en';
 
@@ -41,13 +42,33 @@ export function TaskItem({
   onDragStart,
   onDrop
 }: Props) {
+  const mutationLock = useRef(false);
+  const [busy, setBusy] = useState(false);
+
+  async function runMutation(action: () => Promise<void>) {
+    if (mutationLock.current) return;
+    mutationLock.current = true;
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
+  }
+
   return (
     <li
       className={`task-card card priority-${task.priority}`}
-      draggable={canReorder}
-      onDragStart={() => onDragStart(task)}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={() => onDrop(task)}
+      draggable={canReorder && !busy}
+      aria-busy={busy}
+      onDragStart={() => {
+        if (!busy) onDragStart(task);
+      }}
+      onDragOver={(event) => {
+        if (!busy) event.preventDefault();
+      }}
+      onDrop={() => void runMutation(() => onDrop(task))}
     >
       <div className="task-row">
         <button
@@ -58,8 +79,8 @@ export function TaskItem({
               ? strings.reopenTaskLabel(task.title)
               : strings.completeTaskLabel(task.title)
           }
-          onClick={() => onToggle(task)}
-          disabled={task.status === 'archived'}
+          onClick={() => void runMutation(() => onToggle(task))}
+          disabled={busy || task.status === 'archived'}
         >
           {task.status === 'completed' ? '✓' : ''}
         </button>
@@ -99,36 +120,53 @@ export function TaskItem({
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => onMove(task, -1)}
+                onClick={() => void runMutation(() => onMove(task, -1))}
                 aria-label={strings.moveTaskUp}
+                disabled={busy}
               >
                 ↑
               </button>
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => onMove(task, 1)}
+                onClick={() => void runMutation(() => onMove(task, 1))}
                 aria-label={strings.moveTaskDown}
+                disabled={busy}
               >
                 ↓
               </button>
             </>
           )}
           {task.status !== 'archived' && (
-            <button className="ghost" type="button" onClick={() => onEdit(task)}>
+            <button className="ghost" type="button" onClick={() => onEdit(task)} disabled={busy}>
               {strings.edit}
             </button>
           )}
           {task.status === 'archived' ? (
-            <button className="ghost" type="button" onClick={() => onRestore(task)}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => void runMutation(() => onRestore(task))}
+              disabled={busy}
+            >
               {strings.restore}
             </button>
           ) : (
-            <button className="ghost" type="button" onClick={() => onArchive(task)}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => void runMutation(() => onArchive(task))}
+              disabled={busy}
+            >
               {strings.archive}
             </button>
           )}
-          <button className="danger ghost" type="button" onClick={() => onDelete(task)}>
+          <button
+            className="danger ghost"
+            type="button"
+            onClick={() => void runMutation(() => onDelete(task))}
+            disabled={busy}
+          >
             {strings.delete}
           </button>
         </div>

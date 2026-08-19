@@ -6,6 +6,7 @@ import { StatsPanel } from './components/StatsPanel';
 import { TaskComposer } from './components/TaskComposer';
 import { TaskItem } from './components/TaskItem';
 import { Toolbar } from './components/Toolbar';
+import { TASK_PAGE_SIZE } from './config';
 import { TASK_LIMITS } from './domain/limits';
 import {
   archiveTask,
@@ -52,6 +53,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState(TASK_PAGE_SIZE);
   const draggedTask = useRef<Task | null>(null);
   const notifiedIds = useRef(new Set<string>());
   const searchInput = useRef<HTMLInputElement>(null);
@@ -143,7 +145,16 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    setVisibleLimit(TASK_PAGE_SIZE);
+  }, [filters]);
+
   const visibleTasks = useMemo(() => filterAndSortTasks(tasks, filters), [tasks, filters]);
+  const renderedTasks = useMemo(
+    () => visibleTasks.slice(0, visibleLimit),
+    [visibleLimit, visibleTasks]
+  );
+  const remainingTasks = Math.max(0, visibleTasks.length - renderedTasks.length);
   const stats = useMemo(() => calculateStats(tasks), [tasks]);
   const projects = useMemo(
     () => [...new Set(tasks.map((task) => task.project).filter(Boolean))].sort(),
@@ -269,7 +280,7 @@ export default function App() {
   }
 
   async function move(task: Task, direction: -1 | 1) {
-    const active = visibleTasks
+    const active = renderedTasks
       .filter((item) => item.status === 'active')
       .sort((a, b) => a.order - b.order);
     const index = active.findIndex((item) => item.id === task.id);
@@ -298,8 +309,8 @@ export default function App() {
     ) {
       return;
     }
-    const activeVisibleTasks = visibleTasks.filter((task) => task.status === 'active');
-    const changed = reorderVisibleTasks(activeVisibleTasks, source.id, target.id);
+    const activeRenderedTasks = renderedTasks.filter((task) => task.status === 'active');
+    const changed = reorderVisibleTasks(activeRenderedTasks, source.id, target.id);
     if (!changed.length) return;
     const saved = await runUserAction('task_drag_reorder_failed', strings.taskReorderError, () =>
       repository.putTasks(changed)
@@ -457,32 +468,48 @@ export default function App() {
                 <p>{strings.emptyBody}</p>
               </div>
             ) : (
-              <ul className="task-list">
-                {visibleTasks.map((task) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    isOverdue={task.status === 'active' && Boolean(task.dueDate) && task.dueDate! < today}
-                    canReorder={filters.sort === 'manual' && task.status === 'active'}
-                    onToggle={toggleTask}
-                    onEdit={(next) => {
-                      setEditingTask(next);
-                      window.scrollTo({
-                        top: 0,
-                        behavior: settings.reduceMotion ? 'auto' : 'smooth'
-                      });
-                    }}
-                    onArchive={archive}
-                    onRestore={restore}
-                    onDelete={remove}
-                    onMove={move}
-                    onDragStart={(next) => {
-                      draggedTask.current = next;
-                    }}
-                    onDrop={dropOn}
-                  />
-                ))}
-              </ul>
+              <>
+                <ul id="task-list" className="task-list">
+                  {renderedTasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      isOverdue={
+                        task.status === 'active' && Boolean(task.dueDate) && task.dueDate! < today
+                      }
+                      canReorder={filters.sort === 'manual' && task.status === 'active'}
+                      onToggle={toggleTask}
+                      onEdit={(next) => {
+                        setEditingTask(next);
+                        window.scrollTo({
+                          top: 0,
+                          behavior: settings.reduceMotion ? 'auto' : 'smooth'
+                        });
+                      }}
+                      onArchive={archive}
+                      onRestore={restore}
+                      onDelete={remove}
+                      onMove={move}
+                      onDragStart={(next) => {
+                        draggedTask.current = next;
+                      }}
+                      onDrop={dropOn}
+                    />
+                  ))}
+                </ul>
+                {remainingTasks > 0 && (
+                  <div className="load-more">
+                    <button
+                      className="secondary"
+                      type="button"
+                      aria-controls="task-list"
+                      onClick={() => setVisibleLimit((current) => current + TASK_PAGE_SIZE)}
+                    >
+                      {strings.showMoreTasks(remainingTasks)}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </main>

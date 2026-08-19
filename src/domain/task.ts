@@ -274,7 +274,7 @@ function normalizeDateTime(value: string | null | undefined): string | null {
 }
 
 function normalizeTags(tags: string[]): string[] {
-  const normalized = tags.map((tag) => tag.trim().toLocaleLowerCase()).filter(Boolean);
+  const normalized = tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
   for (const tag of normalized) {
     if (tag.length > TASK_LIMITS.tag) fail('task-tag-too-long', { max: TASK_LIMITS.tag });
   }

@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible TaskMint problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Please remove personal or sensitive task content before sharing logs or screenshots.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open...\n2. Create...\n3. Observe..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: TaskMint version
+      placeholder: v0.1.0
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser family
+      options: [Chrome/Chromium, Firefox, Safari/WebKit, Edge, Other]
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed private task content and secrets from this report.
+          required: true

@@ -1,0 +1,28 @@
+.update-prompt {
+  bottom: 88px;
+  align-items: flex-start;
+}
+
+.update-prompt strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.update-prompt p {
+  margin: 0;
+  color: #d6e6e2;
+  line-height: 1.4;
+}
+
+.update-prompt-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .update-prompt {
+    bottom: 78px;
+    display: grid;
+  }
+}

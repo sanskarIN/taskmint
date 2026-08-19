@@ -19,6 +19,30 @@ describe('TaskComposer', () => {
     });
   });
 
+  it('serializes submissions while a save is pending', async () => {
+    let resolveSubmit: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      resolveSubmit = resolve;
+    });
+    const onSubmit = vi.fn().mockReturnValue(pending);
+    render(<TaskComposer onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByPlaceholderText('What needs to be done?'), {
+      target: { value: 'Only once' }
+    });
+    const form = screen.getByRole('form', { name: 'Add task' });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect((screen.getByRole('button', { name: 'Add task' }) as HTMLButtonElement).disabled).toBe(true);
+
+    resolveSubmit?.();
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Add task' }) as HTMLButtonElement).disabled).toBe(false);
+    });
+  });
+
   it('clears stale edit values after an edit is saved', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const editingTask = createTask({ title: 'Original title', notes: 'Original notes' });

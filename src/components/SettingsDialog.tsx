@@ -32,7 +32,9 @@ export function SettingsDialog({
   const closeButton = useRef<HTMLButtonElement>(null);
   const jsonInput = useRef<HTMLInputElement>(null);
   const csvInput = useRef<HTMLInputElement>(null);
+  const actionLock = useRef(false);
   const [actionError, setActionError] = useState('');
+  const [actionBusy, setActionBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -49,17 +51,23 @@ export function SettingsDialog({
   if (!open) return null;
 
   async function runAction(action: () => Promise<void>, failureMessage = strings.settingsSaveError) {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setActionBusy(true);
     setActionError('');
     try {
       await action();
     } catch {
       setActionError(failureMessage);
+    } finally {
+      actionLock.current = false;
+      setActionBusy(false);
     }
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>, type: 'json' | 'csv') {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || actionLock.current) return;
     await runAction(async () => {
       if (type === 'json') await onImportJson(file);
       else await onImportCsv(file);
@@ -69,6 +77,7 @@ export function SettingsDialog({
 
   function trapFocus(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
+      if (actionBusy) return;
       event.preventDefault();
       onClose();
       return;
@@ -100,7 +109,7 @@ export function SettingsDialog({
       className="modal-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (!actionBusy && event.target === event.currentTarget) onClose();
       }}
     >
       <section
@@ -109,6 +118,7 @@ export function SettingsDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
+        aria-busy={actionBusy}
         onKeyDown={trapFocus}
       >
         <div className="modal-header">
@@ -122,6 +132,7 @@ export function SettingsDialog({
             type="button"
             onClick={onClose}
             aria-label={strings.closeSettings}
+            disabled={actionBusy}
           >
             ×
           </button>
@@ -139,11 +150,11 @@ export function SettingsDialog({
             {strings.theme}
             <select
               value={settings.theme}
-              onChange={(event) =>
-                void runAction(() =>
-                  onChange({ ...settings, theme: event.target.value as ThemeMode })
-                )
-              }
+              disabled={actionBusy}
+              onChange={(event) => {
+                const theme = event.target.value as ThemeMode;
+                void runAction(() => onChange({ ...settings, theme }));
+              }}
             >
               <option value="system">{strings.themeSystem}</option>
               <option value="light">{strings.themeLight}</option>
@@ -154,11 +165,11 @@ export function SettingsDialog({
             <input
               type="checkbox"
               checked={settings.reduceMotion}
-              onChange={(event) =>
-                void runAction(() =>
-                  onChange({ ...settings, reduceMotion: event.target.checked })
-                )
-              }
+              disabled={actionBusy}
+              onChange={(event) => {
+                const reduceMotion = event.target.checked;
+                void runAction(() => onChange({ ...settings, reduceMotion }));
+              }}
             />
             {strings.reduceMotion}
           </label>
@@ -170,6 +181,7 @@ export function SettingsDialog({
           <button
             type="button"
             className="secondary"
+            disabled={actionBusy}
             onClick={() => void runAction(onEnableNotifications)}
           >
             {strings.enableBrowserNotifications}
@@ -183,6 +195,7 @@ export function SettingsDialog({
             <button
               type="button"
               className="secondary"
+              disabled={actionBusy}
               onClick={() => void runAction(async () => onExportJson(), strings.exportError)}
             >
               {strings.backupJson}
@@ -190,14 +203,25 @@ export function SettingsDialog({
             <button
               type="button"
               className="secondary"
+              disabled={actionBusy}
               onClick={() => void runAction(async () => onExportCsv(), strings.exportError)}
             >
               {strings.exportCsv}
             </button>
-            <button type="button" className="secondary" onClick={() => jsonInput.current?.click()}>
+            <button
+              type="button"
+              className="secondary"
+              disabled={actionBusy}
+              onClick={() => jsonInput.current?.click()}
+            >
               {strings.restoreJson}
             </button>
-            <button type="button" className="secondary" onClick={() => csvInput.current?.click()}>
+            <button
+              type="button"
+              className="secondary"
+              disabled={actionBusy}
+              onClick={() => csvInput.current?.click()}
+            >
               {strings.importCsv}
             </button>
           </div>
@@ -207,6 +231,7 @@ export function SettingsDialog({
             type="file"
             accept="application/json,.json"
             tabIndex={-1}
+            disabled={actionBusy}
             onChange={(event) => void handleFile(event, 'json')}
           />
           <input
@@ -215,11 +240,13 @@ export function SettingsDialog({
             type="file"
             accept="text/csv,.csv"
             tabIndex={-1}
+            disabled={actionBusy}
             onChange={(event) => void handleFile(event, 'csv')}
           />
           <button
             type="button"
             className="danger secondary"
+            disabled={actionBusy}
             onClick={() => void runAction(onDeleteAll)}
           >
             {strings.deleteAllLocalData}
@@ -229,7 +256,12 @@ export function SettingsDialog({
         <div className="settings-section">
           <h3>{strings.updates}</h3>
           <p className="muted">{strings.updatesDescription}</p>
-          <button type="button" className="secondary" onClick={() => window.location.reload()}>
+          <button
+            type="button"
+            className="secondary"
+            disabled={actionBusy}
+            onClick={() => window.location.reload()}
+          >
             {strings.reloadTaskMint}
           </button>
         </div>

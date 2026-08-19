@@ -1,6 +1,6 @@
 # TaskMint Release Guide
 
-TaskMint follows Semantic Versioning, but package metadata alone does not make a build a release. Release promotion requires reproducible dependency state, exact-source automated verification, manual browser review, and real artifact evidence.
+TaskMint follows Semantic Versioning, but package metadata alone does not make a build a release. Promotion requires reproducible dependencies, exact-source automated verification, complete documentation, manual browser review, and real artifact evidence.
 
 For workflow internals see `operations.md`.
 
@@ -35,7 +35,9 @@ Before verification:
 3. prepare `CHANGELOG.md` release notes from Unreleased content;
 4. reconcile `ROADMAP.md` milestone state;
 5. update `what_changed.md` continuation/release state;
-6. ensure documentation describes the actual release tree.
+6. ensure documentation describes the actual release tree;
+7. ensure every tracked file is represented in `docs/file-index.md`;
+8. ensure current tests/E2E/benchmark paths are represented in `docs/test-matrix.md`.
 
 Do not create the Git tag yet.
 
@@ -45,6 +47,7 @@ Review at minimum:
 
 - `README.md`
 - `docs/README.md`
+- `docs/file-index.md`
 - `docs/user-guide.md`
 - `docs/setup.md`
 - `docs/architecture.md`
@@ -54,9 +57,13 @@ Review at minimum:
 - `docs/test-matrix.md`
 - `docs/operations.md`
 - `docs/accessibility.md`
+- `docs/performance.md`
 - `docs/release.md`
 - `docs/troubleshooting.md`
 - `docs/repository-reference.md`
+- `docs/github.md`
+- current ADRs under `docs/adr/`
+- `docs/screenshots/README.md`
 - `SECURITY.md`
 - `PRIVACY.md`
 - `SUPPORT.md`
@@ -66,10 +73,13 @@ Run:
 
 ```bash
 npm run docs:check
+npm run docs:inventory
 npm run format:check
 ```
 
-External links are not fetched by `docs:check`; manually review important external support/funding/repository links before release.
+`docs:inventory` uses `git ls-files`, so run it inside a real Git checkout. It is the release guard against silently skipping newly tracked files in documentation.
+
+External links are not fetched by `docs:check`; manually review important external repository/support/funding links.
 
 ## 4. Real lockfile requirement
 
@@ -79,12 +89,14 @@ Generate it only through npm in a network-enabled environment.
 
 Recommended process:
 
-1. start from intended package graph;
-2. run npm normally to resolve/generate lockfile;
-3. inspect package versions/registries/integrity metadata;
+1. start from the intended package graph;
+2. run npm normally to generate the lockfile;
+3. inspect package versions, registries, and integrity metadata;
 4. run clean locked install;
 5. run quality/security/browser gates;
-6. commit the reviewed generated lockfile.
+6. commit the reviewed generated lockfile;
+7. update `docs/file-index.md` because the lockfile becomes a new tracked file;
+8. rerun `docs:inventory` and all exact-head checks.
 
 Never manually construct lockfile content to satisfy the release guard.
 
@@ -112,9 +124,9 @@ From a clean checkout of the exact candidate:
 npm ci --ignore-scripts
 ```
 
-The release must not depend on a developer's existing `node_modules` tree.
+The release must not depend on an existing developer `node_modules` tree.
 
-## 7. Automated local/clean checks
+## 7. Automated clean checks
 
 Run:
 
@@ -125,17 +137,16 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-`npm run check` includes:
+`npm run check` currently includes:
 
-- format invariants;
-- docs link check;
-- secret-pattern guard;
-- lint;
-- typecheck;
-- unit/component/property/config tests;
-- production build.
-
-E2E then verifies built/previewed output in Chromium.
+1. format invariants;
+2. documentation links;
+3. documentation inventory;
+4. secret patterns;
+5. lint;
+6. typecheck;
+7. unit/component/property/config tests;
+8. production build.
 
 ## 8. Exact-source hosted checks
 
@@ -147,10 +158,10 @@ The release-candidate source must have explicit successful hosted:
 
 Always record/check the exact SHA.
 
-If any source or documentation commit changes the branch:
+If any source, configuration, test, documentation, screenshot, or lockfile commit changes the branch:
 
 - the SHA changes;
-- earlier hosted runs are stale for release certification;
+- earlier hosted runs become stale for release certification;
 - require fresh checks.
 
 ## 9. Merge verification
@@ -160,15 +171,13 @@ If verification occurs on a PR source branch:
 1. require successful exact-head checks;
 2. merge only after success;
 3. obtain the resulting exact `main` SHA;
-4. verify the resulting `main` tree again as required by repository policy.
+4. verify the resulting `main` tree again when required by policy.
 
-Do not assume PR head equals merge/main SHA.
+Do not assume PR head equals final merge/main SHA.
 
-## 10. Manual functional review
+## 10. Manual task lifecycle review
 
 Using the exact built candidate, verify:
-
-### Task lifecycle
 
 - create;
 - edit;
@@ -180,68 +189,95 @@ Using the exact built candidate, verify:
 - delete;
 - Undo.
 
-### Mutation safety
+Verify persistence failures do not leave the UI claiming success.
+
+## 11. Mutation-safety review
+
+Verify:
 
 - rapid repeat task submit does not duplicate;
 - rapid repeat row action does not duplicate;
 - while one task write is pending, other task rows/composer are unavailable;
-- Settings/global task shortcuts cannot enter competing task action during pending mutation;
-- UI re-enables after failure/success.
+- Settings/global task shortcuts cannot enter competing task mutation during pending work;
+- Undo cannot race another task write;
+- UI re-enables after success/failure;
+- recurring completion cannot create duplicate next occurrences through rapid activation.
 
-### Smart navigation/filtering
+## 12. Smart views/filter/order review
 
-- Inbox/Today/Upcoming/Overdue/Completed/Archived/All;
+Verify:
+
+- Inbox;
+- Today;
+- Upcoming;
+- Overdue;
+- Completed;
+- Archived;
+- All Tasks;
 - project selection;
 - search;
 - priority/tag filters;
 - all sort modes;
-- manual keyboard reorder;
-- drag/drop reorder in Manual mode only.
+- keyboard manual reorder;
+- drag/drop reorder only in intended Manual/active/rendered scope.
 
-### Date rollover
+## 13. Date rollover/statistics review
 
-- leave app open across current-date boundary or simulate relevant focus/visibility return;
-- verify Today/Overdue/statistics refresh.
+Leave the app open across a date change or reproduce focus/visibility return around rollover.
 
-### Progressive rendering
+Verify:
 
-- verify initial bounded list and Show more behavior with a large task set.
+- Today changes correctly;
+- overdue calculations refresh;
+- statistics refresh;
+- future completion timestamps are not counted as past seven-day completions.
 
-## 11. Manual accessibility review
+## 14. Progressive rendering review
+
+Use a large synthetic task set.
+
+Verify:
+
+- initial card count is bounded;
+- full matching count is shown;
+- Show more reveals additional cards;
+- changing search/filter/sort resets the render page correctly.
+
+## 15. Accessibility review
 
 Follow `accessibility.md`.
 
-At minimum:
+At minimum verify:
 
-- keyboard-only primary journey;
+- complete keyboard-only primary journey;
 - current smart-view/project semantics;
 - named filters/labels;
 - visible focus;
 - modal focus trap/restoration;
 - pending busy/disabled state;
-- keyboard reordering;
+- keyboard ordering;
 - 200% zoom/reflow;
 - themes;
 - reduced motion;
 - narrow/mobile touch targets;
-- update/recovery status semantics.
+- update/recovery semantics.
 
-## 12. JSON backup/restore review
+## 16. JSON backup/restore review
 
 Using fictional/demo data:
 
-1. create tasks covering fields/statuses;
+1. create tasks covering major fields/statuses;
 2. export JSON;
-3. inspect expected schema-v2 envelope;
+3. inspect schema-v2 envelope;
 4. delete local data;
 5. restore backup;
-6. verify tasks/settings restoration as applicable;
+6. verify tasks/settings as applicable;
 7. try malformed backup and confirm current data is not cleared;
-8. verify duplicate IDs/impossible dates/unsafe orders fail safely.
+8. verify duplicate IDs, impossible dates, lifecycle errors, and unsafe orders fail safely.
 
-## 13. CSV review
+## 17. CSV review
 
-Test current TaskMint export/import with:
+Test current TaskMint CSV with:
 
 - commas;
 - quotes;
@@ -250,130 +286,149 @@ Test current TaskMint export/import with:
 - tags containing `|`;
 - literal legacy `json:` tag text;
 - formula-like title/notes/project values;
-- leading spaces/tabs/newlines before formula prefix;
+- leading spaces/tabs/newlines before formula prefixes;
 - blank logical records;
 - malformed quotes;
-- unknown TaskMint encoding marker;
+- unknown encoding marker;
 - invalid enum/date values;
-- CSV merge into an existing ordered task set.
+- merge into an existing ordered task set.
 
 Verify:
 
-- marked structured tags round-trip;
+- structured marked tags round-trip;
 - legacy unmarked tags retain legacy semantics;
-- error row numbers refer to original source records;
-- blank records do not consume task quota;
-- imported manual orders follow existing max without collisions.
+- validation rows refer to original source records;
+- blank records do not consume the task quota;
+- input-size cap still applies;
+- imported manual orders follow existing maximum without collision.
 
-## 14. Same-file import retry
+## 18. Same-file import retry
 
-Explicitly verify:
+Verify both JSON and CSV where practical:
 
-1. select a JSON/CSV file that fails or completes;
-2. reopen/select the **same exact file** again;
-3. confirm the file input change can be triggered again without requiring a different file first.
+1. select a file;
+2. allow import to fail or complete;
+3. choose the same exact file again;
+4. confirm the input change can fire again without selecting another file first.
 
-Settings clears the selected DOM input value immediately after capturing the `File` object to support this.
+Settings clears the hidden input value immediately after capturing the browser `File` object.
 
-## 15. Local-data deletion/recovery review
+## 19. Local deletion/recovery review
 
 ### Delete all
 
-- confirmation appears;
-- database clear succeeds before UI claims success;
-- tasks disappear;
-- appropriate settings state remains/returns as designed.
+Verify:
 
-### Corrupt storage
+- confirmation;
+- database clear before UI success;
+- task UI clears;
+- expected settings state remains/returns.
 
-Using a dedicated test profile/fixture:
+### Corrupt local data
+
+Using a disposable synthetic profile:
 
 - seed invalid current-schema data;
 - verify blocking recovery UI;
 - verify normal editor/settings are absent;
-- verify malformed stored data remains untouched.
+- verify malformed records remain untouched.
 
-Do not use real personal data for corruption testing.
+Never use real personal data for corruption testing.
 
-## 16. Offline review
+## 20. Offline review
 
 Use production build/preview or installed PWA:
 
 1. load online to establish cached shell;
 2. create local data;
 3. switch offline;
-4. reload/navigate within supported cached app shell;
+4. reload/navigate within supported cached shell;
 5. perform local task operations;
 6. confirm Offline indicator;
 7. restore network;
-8. verify local data intact.
+8. verify local data remains intact.
 
-## 17. Notification review
+## 21. Notification review
 
 With explicit permission:
 
 - verify a small set of due reminders;
-- verify individual notifications may include title;
-- verify an excess set is bounded and summarized without excess titles;
-- verify a failed notification remains retryable where practical;
-- verify privacy expectation on OS lock/notification surfaces.
+- verify individual notifications may include task title;
+- verify excess due reminders are bounded and summarized without excess titles;
+- verify failed delivery remains retryable where practical;
+- review OS/browser preview privacy.
 
-Remember that closed-app background reminder scheduling is not promised across every browser/OS.
+Closed-app portable background alarm scheduling is not promised across every browser/OS.
 
-## 18. PWA update review
+## 22. PWA update review
 
 Use actual production service-worker behavior.
 
 1. run/install current build;
-2. create/keep unsaved task composer input;
-3. make a newer build available so a waiting worker exists;
-4. confirm TaskMint shows Update now/Later rather than forcing reload;
+2. keep unsaved task composer input;
+3. make a newer build available so a worker waits;
+4. confirm Update now/Later instead of forced reload;
 5. confirm unsaved input remains while waiting;
-6. choose Later and verify no forced activation;
-7. trigger notice again as needed;
+6. choose Later and confirm no forced activation;
+7. expose prompt again as needed;
 8. choose Update now;
-9. verify activation/reload succeeds;
-10. verify local persisted task data remains intact.
+9. verify activation/reload;
+10. verify persisted local task data remains intact;
+11. verify repeated rapid Update now cannot enter multiple concurrent activations.
 
-Also verify rapid Update now activation does not enter multiple concurrent update calls.
-
-## 19. Theme and responsive review
+## 23. Theme/responsive review
 
 Check:
 
-- system theme follows OS/browser preference;
+- system theme;
 - light;
 - dark;
 - reduced motion;
-- desktop width;
-- tablet/narrow width;
+- desktop;
+- tablet/narrow;
 - mobile-like width;
 - 200% zoom.
 
-## 20. Privacy/security manual review
+## 24. Privacy/security manual review
 
 Confirm:
 
-- no new task-content network/analytics flow was introduced unintentionally;
+- no unintended task-content network/analytics flow;
 - production CSP remains restrictive;
-- development CSP allowances remain serve-only;
-- raw unknown errors are not shown to users;
-- diagnostic logger still redacts arbitrary content;
-- imports are rendered as React text rather than raw HTML;
-- no real secret exists in repository/config;
-- exported demo files/screenshots contain no private user data.
+- dev CSP allowances remain serve-only;
+- unknown raw errors are not shown to users;
+- diagnostic logging still fail-closes arbitrary user content;
+- imports render as React text rather than raw HTML;
+- no real secret is committed;
+- exported demo files/screenshots contain no private data.
 
-## 21. Screenshot capture
+## 25. Screenshot capture
 
 Only after the exact build is verified:
 
+- follow `screenshots/README.md`;
 - use fictional/demo task data;
 - capture actual product UI;
-- follow `screenshots/README.md` capture set;
-- ensure images match the candidate being released;
-- do not use generated/mock imagery as evidence of a real build.
+- ensure images match the candidate;
+- do not use generated/mock imagery as release evidence.
 
-## 22. Tagging
+When screenshot files are added, update `file-index.md` and rerun `docs:inventory` because they become tracked repository files.
+
+## 26. Final documentation inventory after artifacts/docs changes
+
+Immediately before tagging, run again:
+
+```bash
+npm run docs:check
+npm run docs:inventory
+npm run format:check
+```
+
+This final pass matters because the lockfile, screenshots, changelog promotion, and release documentation themselves may have added/changed tracked paths since earlier verification.
+
+Any commit changes the exact candidate SHA and requires fresh hosted verification.
+
+## 27. Tagging
 
 Only after every blocker is green:
 
@@ -384,23 +439,23 @@ git push origin vX.Y.Z
 
 The exact tag must match package version.
 
-## 23. Tagged release workflow
+## 28. Tagged release workflow
 
-The GitHub Release workflow independently reruns:
+GitHub Release independently reruns:
 
-1. release tag/lockfile guard;
+1. tag/lockfile guard;
 2. `npm ci --ignore-scripts`;
-3. `npm run check`;
-4. `npm audit --audit-level=high`;
+3. `npm run check` including documentation inventory;
+4. high-severity audit;
 5. Chromium installation;
 6. Playwright E2E;
 7. package `dist`;
 8. generate SHA-256;
-9. publish GitHub Release assets.
+9. publish release assets.
 
-Do not manually publish a release to bypass a failing workflow unless the repository formally changes its release process and documents why.
+Do not manually publish a release to make a failed automated release appear successful.
 
-## 24. Release artifacts
+## 29. Release artifacts
 
 Expected assets:
 
@@ -409,7 +464,7 @@ taskmint-web-vX.Y.Z.tar.gz
 taskmint-web-vX.Y.Z.tar.gz.sha256
 ```
 
-## 25. Checksum verification
+## 30. Checksum verification
 
 Linux/macOS with `sha256sum`:
 
@@ -417,39 +472,40 @@ Linux/macOS with `sha256sum`:
 sha256sum -c taskmint-web-vX.Y.Z.tar.gz.sha256
 ```
 
-On other platforms use an OS SHA-256 tool and compare the digest with the published checksum.
+On other systems use a SHA-256 tool and compare with the published digest.
 
-## 26. Post-release verification
+## 31. Post-release verification
 
-After GitHub Release publication:
+After publication:
 
 - verify tag points to intended commit;
 - verify release notes/version;
-- verify both archive/checksum assets exist;
+- verify archive/checksum exist;
 - verify checksum;
-- verify install/serve artifact as appropriate;
+- verify artifact can be served/used as intended;
 - verify public docs/changelog match released version;
 - monitor issues/security reports for regressions.
 
-## 27. Failed release workflow
+## 32. Failed release workflow
 
 If tagged workflow fails:
 
 1. do not describe the release as successful;
-2. inspect actual workflow/job/log evidence;
-3. determine whether tag/release assets were partially created;
+2. inspect actual job/log evidence;
+3. determine whether tag/assets were partially created;
 4. fix source/process deliberately;
 5. follow repository policy for correcting/replacing the release;
-6. never alter checksum/artifacts to conceal a different source tree.
+6. never alter checksum/artifact metadata to conceal a different source tree.
 
-## 28. Release record
+## 33. Release record
 
-After successful release, update current continuation/handoff documentation with:
+After successful release, update the current handoff with:
 
 - tag;
 - release commit SHA;
 - successful required check conclusions;
 - artifact names/checksum verification;
-- screenshot set;
+- screenshot filenames;
+- confirmation screenshots used fictional/demo data and the verified build;
 - known limitations;
 - next roadmap milestone.

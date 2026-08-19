@@ -43,6 +43,20 @@ describe('TaskComposer', () => {
     });
   });
 
+  it('honors an app-wide task mutation lock without submitting or clearing the draft', () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<TaskComposer disabled onSubmit={onSubmit} />);
+
+    const form = screen.getByRole('form', { name: 'Add task' });
+    const title = screen.getByPlaceholderText('What needs to be done?') as HTMLInputElement;
+    expect(form.getAttribute('aria-disabled')).toBe('true');
+    expect(title.disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Add task' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.submit(form);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('clears stale edit values after an edit is saved', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const editingTask = createTask({ title: 'Original title', notes: 'Original notes' });

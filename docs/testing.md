@@ -1,128 +1,454 @@
-# Testing
+# TaskMint Testing Guide
 
-TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, persistence atomicity, PWA update safety, local-data corruption recovery, and repository hygiene as release-critical paths.
+TaskMint uses multiple testing layers because no single suite can prove domain correctness, browser persistence, portability, accessibility, PWA behavior, repository hygiene, and release safety at once.
 
-## Unit/domain
+For an exhaustive current file-by-file list see `test-matrix.md`.
 
-`tests/task.test.ts` covers:
+## 1. Testing principles
 
-- title and locale-independent tag normalization
-- task field/count limits
-- invalid calendar-date rejection
-- recurrence boundaries and month-end clamping
-- recurring reminders without due dates
-- deterministic recurring-task ordering
-- visible-slot task reordering
-- smart-view filtering
-- date rollover from Today to Overdue
-- productivity statistics, including exclusion of future completion timestamps from the last-seven-days window
+- Put a regression close to the invariant it protects.
+- Prefer deterministic time/data/random fixtures.
+- Use real browser/IndexedDB tests where browser behavior matters.
+- Treat imported/persisted data as untrusted in tests as well as production.
+- Do not replace accessibility manual review with one automated smoke suite.
+- Do not turn machine-specific benchmark timings into arbitrary CI thresholds.
+- A test file existing in the repository does not prove it has passed for the current release SHA.
 
-`tests/datetime.test.ts` verifies strict reminder/backup timestamp parsing, impossible-date rejection, leap-day acceptance, timezone-offset canonicalization, and compatibility with TaskMint's own exported ISO timestamps.
+## 2. Commands
 
-`tests/order.test.ts` covers:
+### Unit/component/property/config
 
-- first/custom-step order allocation
-- 100,000-entry allocation without argument spreading
-- safe-integer/overflow rejection
-- deterministic order+ID tie-breaking
-- duplicate-order normalization while preserving visible order
-- proof that normalized tied tasks become reorderable
+```bash
+npm test
+```
 
-`tests/validation-order.test.ts` verifies unsafe persisted order rejection and deterministic normalization of duplicate safe order slots during backup validation.
+Watch mode:
 
-`tests/errors.test.ts` covers typed `TaskMintError` codes, safe default messages, malformed-JSON wrapping, row-aware CSV errors, immutable structured error details, and the UI boundary that hides unknown infrastructure messages.
+```bash
+npm run test:watch
+```
 
-`tests/logger.test.ts` verifies development diagnostics never print arbitrary `Error.message` text and that known TaskMint errors log only their stable code.
+### Browser E2E
 
-`tests/keyboard.test.ts` covers global shortcut resolution, modifier handling, editable-control protection, and modal blocking.
-
-`tests/notifications.test.ts` covers successful one-time due-reminder delivery, isolated Notification-constructor failure, bounded individual reminder delivery, one title-free summary for excess reminders, and retryability when that summary cannot be delivered.
-
-`tests/security-config.test.ts` locks the committed production CSP to self-restricted scripts/styles/connections and rejects accidental development WebSocket or inline-style allowances in the built HTML source.
-
-`tests/pwa-config.test.ts` verifies prompt-mode PWA updates, absence of `autoUpdate`, the pinned `workbox-window` runtime dependency, explicit `updateServiceWorker(true)` activation, and mounting of the update prompt.
-
-`tests/repository.test.ts` verifies validated local task/settings reads, malformed-record rejection, default settings behavior, transactional bulk writes, bulk failure propagation, and empty-batch optimization.
-
-`tests/release-guard.test.ts` executes the dependency-free release guard against isolated temporary fixtures and verifies exact tag/version matching plus fail-closed lockfile behavior.
-
-## Data portability and generated properties
-
-`tests/export.test.ts` covers:
-
-- JSON backup round trips
-- unsupported backup rejection
-- duplicate task-ID rejection
-- malformed timestamp rejection
-- oversized backup-field rejection
-- CSV quoting and multiline round trips
-- lossless structured tag encoding, including tags containing the legacy `|` separator
-- backward-compatible legacy pipe-separated tag imports
-- reversible spreadsheet-formula neutralization for title/notes/project fields
-- leading-apostrophe round trips and unchanged legacy CSV semantics
-- deterministic stress round trips with commas, quotes, CR/LF content, Unicode, tags, projects, priorities, and recurrence
-- UTF-8 BOM headers
-- malformed enum/date rejection
-- duplicate CSV-column rejection
-
-`tests/csv-compat.test.ts` verifies that legacy `json:`-prefixed tag text is not confused with TaskMint's encoded format, structured decoding is used only for marked rows, malformed marked structured tags are rejected, and unknown non-empty TaskMint encoding versions fail closed.
-
-`tests/csv-quoting.test.ts` rejects quote characters embedded in unquoted fields and characters after a closing quote while retaining valid escaped-quote parsing.
-
-`tests/csv-security.test.ts` covers formula-like spreadsheet text after leading spaces, tabs, or newlines so restored backup-shaped notes cannot bypass export neutralization.
-
-`tests/property.test.ts` uses seeded deterministic generation rather than production randomness to exercise hundreds of CSV/JSON round trips containing quotes, commas, CR/LF, Unicode, pipes, brackets, and other parser-sensitive characters. Its malformed structured-tag fixtures explicitly use TaskMint's encoding marker. Fixed seeds make every failure reproducible.
-
-`tests/download.test.ts` verifies that export download clicks occur before object-URL cleanup and that cleanup is deferred to the next timer turn for browser compatibility.
-
-## Component
-
-`tests/TaskComposer.test.tsx` exercises accessible form behavior and guards against stale edit values through Testing Library.
-
-`tests/SettingsDialog.test.tsx` verifies synchronous browser export failures are contained behind safe product copy and that stale Settings action errors disappear after close/reopen.
-
-`src/test/setup.ts` performs shared Testing Library cleanup, restores real timers, clears mocks, un-stubs globals, and restores spies after every test so state cannot leak between cases.
-
-## End to end
-
-- `e2e/task-flow.spec.ts` creates a task, switches the browser context offline, completes it, and verifies the Completed smart view.
-- `e2e/migration.spec.ts` creates a real legacy IndexedDB v1/native-version-10 database, opens TaskMint, and verifies the Dexie v2 migration normalized the legacy task.
-- `e2e/corrupt-local-data.spec.ts` seeds malformed current-schema IndexedDB data and verifies TaskMint blocks the editor, leaves stored data untouched, and exposes only the recovery/reload path.
-- `e2e/keyboard.spec.ts` verifies `Ctrl+K` search focus, `N` new-task focus, and typing-context protection.
-- `e2e/backup-restore.spec.ts` downloads a real JSON backup, deletes local data, restores the backup through the file input, and verifies the task returns.
-- `e2e/pagination.spec.ts` seeds 101 local tasks and verifies the UI renders 100 initially and progressively reveals the remainder.
-- `e2e/accessibility.spec.ts` checks core landmarks, rejects unnamed buttons/unlabeled interactive form controls, and verifies shortcut metadata on search/new-task inputs.
-
-Install Playwright's Chromium runtime before the first local E2E run:
+First install Chromium and required system packages:
 
 ```bash
 npm run test:e2e:install
+```
+
+Then:
+
+```bash
 npm run test:e2e
 ```
 
-## Performance benchmark
-
-`bench/task.bench.ts` uses Vitest 4's top-level `bench()` API to provide repeatable 10,000-task filtering/sorting and statistics benchmarks. Run them separately from pass/fail tests:
+### Benchmark
 
 ```bash
 npm run bench
 ```
 
-Benchmark timings are diagnostic rather than CI pass/fail thresholds because runner hardware and load vary. See `docs/performance.md` for comparison guidance.
+### Full non-E2E quality suite
 
-## Deterministic repository checks
+```bash
+npm run check
+```
 
-- `npm run format:check` rejects CRLF drift, missing final newlines, and trailing whitespace across tracked text paths, including `bench/`.
-- `npm run docs:check` resolves repository-relative Markdown links and rejects links that escape the repository or point to missing local targets.
-- `npm run secrets:check` scans tracked text paths, including benchmarks, for common private-key and credential-token patterns without sending repository content to a third-party service.
-- `npm run release:check -- vX.Y.Z` verifies exact tag/package-version alignment and requires a committed `package-lock.json` before a release can proceed.
+### Additional release/security command
 
-The first three checks intentionally require only Node.js and can run before npm dependencies are available. The release guard also uses only Node.js, but it is intentionally expected to fail until the real npm lockfile is committed.
+```bash
+npm audit --audit-level=high
+```
 
-## CI gates
+## 3. Shared test environment
 
-Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component/property tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. CI and E2E use `npm ci` automatically once a lockfile exists and otherwise retain the pre-release fallback install so development verification can continue before the first lockfile is generated. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
+`vite.config.ts` configures Vitest with:
 
-Current workflow definitions use supported current major versions for checkout/setup-node/upload-artifact and CodeQL, while Dependabot monitors GitHub Actions monthly.
+```text
+environment = jsdom
+setupFiles = ./src/test/setup.ts
+```
 
-Tagged releases have no dependency-install fallback: they require the release guard, install only with `npm ci`, rerun the combined quality suite, high-severity dependency audit, and Chromium E2E, then create the release artifact and checksum.
+`src/test/setup.ts` performs shared cleanup after each test:
+
+- DOM cleanup;
+- restore real timers;
+- clear mocks;
+- un-stub globals;
+- restore spies.
+
+This prevents one test's browser/global state from contaminating later tests.
+
+## 4. Task/domain layer
+
+### `tests/task.test.ts`
+
+Covers core task behavior including:
+
+- input normalization;
+- locale-independent canonical tags;
+- field/tag limits;
+- impossible dates;
+- recurrence/month-end clamping;
+- reminder-only recurrence;
+- recurring next occurrence;
+- explicit collision-free next-occurrence order;
+- unsafe occurrence order rejection;
+- smart views;
+- manual visible-slot reorder transformations;
+- Today -> Overdue rollover;
+- productivity statistics;
+- future completion timestamp exclusion from the seven-day metric.
+
+### `tests/datetime.test.ts`
+
+Covers strict timestamp parsing, impossible calendar values, leap dates, timezone offsets, and canonical ISO compatibility.
+
+### `tests/order.test.ts`
+
+Covers safe allocation, large input, overflow rejection, deterministic `(order, id)` comparison, duplicate order normalization, and reorderability after normalization.
+
+### `tests/validation-order.test.ts`
+
+Covers unsafe persisted order rejection and backup duplicate-order normalization.
+
+### `tests/errors.test.ts`
+
+Covers stable typed errors, structured details, malformed JSON wrapping, row-aware CSV failures, duplicate task-batch error contract, and safe UI fallback for unknown infrastructure errors.
+
+## 5. Persistence layer
+
+### `tests/repository.test.ts`
+
+Covers repository trust/persistence boundaries:
+
+- validated local task reads;
+- malformed task rejection;
+- default settings fallback;
+- malformed settings rejection;
+- invalid single-task write rejected before table access;
+- invalid settings write rejected before table access;
+- complete batch validation before transaction open;
+- duplicate task IDs rejected before transaction open;
+- explicit transaction wrapping for multi-task writes;
+- bulk failure propagation;
+- empty-batch no-op;
+- full backup restore validation before destructive transaction/clear behavior.
+
+This test uses a controlled database harness so the repository contract can be tested without making every case a browser E2E test.
+
+## 6. JSON/CSV portability
+
+### `tests/export.test.ts`
+
+Broad portability suite covering:
+
+- JSON backup round trips;
+- invalid/unsupported backup rejection;
+- duplicate backup IDs;
+- invalid timestamps;
+- field limits;
+- CSV quote/multiline round trips;
+- structured tag encoding;
+- legacy pipe tag imports;
+- formula-prefix neutralization/reversal;
+- leading apostrophe behavior;
+- UTF-8 BOM;
+- invalid enums/dates;
+- duplicate CSV columns;
+- deterministic parser-stress values.
+
+### `tests/csv-compat.test.ts`
+
+Current compatibility/hardening coverage:
+
+- unmarked legacy `json:` tag text stays literal;
+- structured tags only decode under TaskMint marker;
+- malformed structured marked tags fail;
+- unknown non-empty encoding version fails;
+- blank source records do not compact validation row numbers;
+- caller-provided import orders remain contiguous across skipped blanks;
+- blank logical records do not consume the task-count quota.
+
+### `tests/csv-quoting.test.ts`
+
+Rejects invalid quote placement and characters after a closed quoted field while preserving legal escaped quotes.
+
+### `tests/csv-security.test.ts`
+
+Protects spreadsheet formula neutralization even after leading whitespace/control characters.
+
+### `tests/property.test.ts`
+
+Uses fixed-seed deterministic generated values to exercise hundreds of parser-sensitive JSON/CSV round trips with Unicode, quotes, commas, line breaks, pipes, brackets, and structured-tag-like text.
+
+### `tests/download.test.ts`
+
+Verifies export click occurs before object URL cleanup and cleanup is deferred to the next timer turn.
+
+## 7. Async interaction/concurrency
+
+### `tests/TaskComposer.test.tsx`
+
+Covers accessible submission, same-form duplicate submit suppression, pending disabled state, external App-wide lock, and edit reset.
+
+### `tests/TaskItem.test.tsx`
+
+Covers per-row mutation serialization and external App-wide locking of task actions/drag.
+
+### `tests/mutation.test.ts`
+
+Covers the reusable exclusive gate:
+
+- competing action exclusion;
+- optional safe busy error;
+- cleanup after action failure;
+- cleanup if entering busy UI state throws.
+
+### `tests/AppMutation.test.tsx`
+
+Integration-level concurrency regression involving two different task rows. It proves the application-wide lock—not merely one row's local state—prevents concurrent writes from stale task snapshots.
+
+### `tests/SettingsDialog.test.tsx`
+
+Covers:
+
+- safe synchronous export failure UI;
+- serialized Settings actions;
+- pending busy/disabled/no-dismiss behavior;
+- immediate import-input clearing while import promise remains pending;
+- stale action-error cleanup after close/reopen.
+
+### `tests/Onboarding.test.tsx`
+
+Covers duplicate onboarding completion suppression and safe storage error UI.
+
+### `tests/PwaUpdatePrompt.test.tsx`
+
+Covers duplicate update activation suppression, pending UI state, safe failure, and retry.
+
+## 8. Navigation/filter accessibility components
+
+### `tests/Sidebar.test.tsx`
+
+Covers:
+
+- current smart view semantics;
+- current project semantics;
+- no simultaneous current smart view during project selection;
+- project callback;
+- project controls inside the navigation landmark.
+
+### `tests/Toolbar.test.tsx`
+
+Covers named filter group semantics, search shortcut metadata, and filter/sort callback wiring.
+
+## 9. Keyboard, reminders, and diagnostics
+
+### `tests/keyboard.test.ts`
+
+Pure shortcut resolution:
+
+- search/new-task bindings;
+- modifier handling;
+- editable target suppression;
+- blocked/modal contexts.
+
+### `tests/notifications.test.ts`
+
+Reminder behavior:
+
+- due notification delivery;
+- constructor failure isolation;
+- bounded individual title-bearing notifications;
+- one title-free excess summary;
+- failed summary/delivery retryability.
+
+### `tests/logger.test.ts`
+
+Development diagnostic privacy:
+
+- arbitrary `Error.message` hidden;
+- stable TaskMint code retained;
+- safe scalar values retained;
+- arbitrary strings/nested structures redacted;
+- sensitive fields redacted;
+- unsafe identifier strings redacted;
+- lookalike words ending in `id` not treated as identifier fields;
+- approved identifier key forms retain restricted safe values.
+
+## 10. Configuration and release scripts
+
+### `tests/security-config.test.ts`
+
+Locks the production CSP boundary and rejects dev-only WebSocket/inline-style relaxations leaking into committed production policy.
+
+### `tests/pwa-config.test.ts`
+
+Checks prompt-mode PWA configuration, absence of `autoUpdate`, `workbox-window` dependency, explicit `updateServiceWorker(true)` flow, and update prompt integration.
+
+### `tests/release-guard.test.ts`
+
+Runs `scripts/check-release.mjs` against isolated temporary fixtures and checks exact tag/package version matching plus fail-closed missing-lockfile behavior.
+
+## 11. End-to-end browser suite
+
+Playwright is configured in `playwright.config.ts` to build and preview production output on `127.0.0.1:4173`, use Chromium/Desktop Chrome, run parallel tests, and collect traces on retry.
+
+CI uses retries; local runs default to no retry.
+
+### `e2e/task-flow.spec.ts`
+
+Create task -> set browser context offline -> complete task -> verify Completed smart view.
+
+### `e2e/migration.spec.ts`
+
+Seeds actual legacy IndexedDB schema data and verifies Dexie v1->v2 migration.
+
+### `e2e/corrupt-local-data.spec.ts`
+
+Seeds malformed current storage and verifies fail-closed recovery without silent deletion/rewrite.
+
+### `e2e/keyboard.spec.ts`
+
+Browser focus behavior for `Ctrl/Cmd+K`, `N`, and editable-context protection.
+
+### `e2e/backup-restore.spec.ts`
+
+Real download/delete/restore file journey.
+
+### `e2e/pagination.spec.ts`
+
+Seeds 101 tasks and verifies 100 initial cards then explicit progressive reveal.
+
+### `e2e/accessibility.spec.ts`
+
+Smoke-checks landmarks, button names, form control labels, and keyboard shortcut metadata.
+
+## 12. What E2E deliberately does not replace
+
+Automated E2E is not sufficient proof for:
+
+- 200% zoom/reflow quality;
+- real screen-reader quality;
+- visual focus clarity in every theme;
+- all touch target behavior on physical devices;
+- notification behavior across every browser/OS;
+- installed-PWA update UX across all supported environments.
+
+Those require manual release verification documented in `release.md`.
+
+## 13. Benchmark
+
+`bench/task.bench.ts` uses Vitest 4's top-level `bench()` API and runs 10,000-task domain scenarios.
+
+Run:
+
+```bash
+npm run bench
+```
+
+Benchmark output is diagnostic because runner hardware/load vary. See `performance.md`.
+
+## 14. Deterministic repository checks
+
+### Formatting invariants
+
+```bash
+npm run format:check
+```
+
+Checks LF, final newline, trailing whitespace across configured tracked text paths.
+
+### Documentation links
+
+```bash
+npm run docs:check
+```
+
+Validates repository-relative Markdown links under docs/GitHub/root documentation. External URLs are intentionally not fetched.
+
+### Secret patterns
+
+```bash
+npm run secrets:check
+```
+
+Scans repository text for common credential/private-key shapes without intentionally printing the matched secret.
+
+### Release guard
+
+```bash
+npm run release:check -- vX.Y.Z
+```
+
+Checks exact tag/version and requires committed `package-lock.json`.
+
+The first three can run before npm dependencies are installed. The release guard is also dependency-free but intentionally fails until the real lockfile exists.
+
+## 15. CI gates
+
+Pull requests trigger:
+
+- CI quality;
+- E2E;
+- CodeQL.
+
+CI quality includes:
+
+- format;
+- docs links;
+- secret patterns;
+- lint;
+- typecheck;
+- Vitest;
+- build;
+- high-severity dependency audit.
+
+E2E installs Chromium and uploads failure reports.
+
+CodeQL analyzes JavaScript/TypeScript.
+
+See `operations.md` for exact workflow triggers, permissions, timeouts, and install policy.
+
+## 16. Lockfile transition behavior
+
+Before a lockfile exists, CI/E2E can use:
+
+```bash
+npm install --ignore-scripts
+```
+
+Once `package-lock.json` is committed, they switch automatically to:
+
+```bash
+npm ci --ignore-scripts
+```
+
+Tagged Release never falls back to `npm install`; it requires the lockfile and `npm ci`.
+
+## 17. Exact-SHA verification rule
+
+A release candidate is verified only when required jobs complete successfully for the exact current SHA.
+
+Not sufficient:
+
+- queued;
+- pending/in-progress;
+- cancelled;
+- absent;
+- a successful older PR-head run;
+- mergeability.
+
+Every source/docs commit changes the PR head and makes prior check results stale for release certification.
+
+## 18. Test maintenance
+
+When a test file is added/removed/renamed:
+
+1. update `test-matrix.md`;
+2. update this guide if a testing layer/strategy changed;
+3. ensure TypeScript includes the path;
+4. keep global cleanup isolated in `src/test/setup.ts`;
+5. update `repository-reference.md`;
+6. run `docs:check` and `format:check`.

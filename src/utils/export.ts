@@ -116,6 +116,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
   const recurrence = value('recurrence') as Recurrence;
   const status = value('status') as TaskStatus;
 
+  if (encoding && encoding !== csvEncodingValue) fail('csv-invalid-encoding', { row: rowNumber });
   if (!priorities.has(priority)) fail('csv-invalid-priority', { row: rowNumber });
   if (!recurrences.has(recurrence)) fail('csv-invalid-recurrence', { row: rowNumber });
   if (!statuses.has(status)) fail('csv-invalid-status', { row: rowNumber });

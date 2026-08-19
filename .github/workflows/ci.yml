@@ -25,6 +25,10 @@ jobs:
         run: npm install --ignore-scripts
       - name: Format
         run: npm run format:check
+      - name: Documentation links
+        run: npm run docs:check
+      - name: Secret patterns
+        run: npm run secrets:check
       - name: Lint
         run: npm run lint
       - name: Typecheck

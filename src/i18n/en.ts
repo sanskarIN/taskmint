@@ -113,7 +113,12 @@ export const strings = {
   deleteAllLocalData: 'Delete all local data',
   updates: 'Updates',
   updatesDescription:
-    'New PWA assets wait safely instead of reloading over unsaved task input. Reload TaskMint when you are ready to activate an update.',
+    'TaskMint waits for your approval before activating a new PWA version, so an update cannot reload over unsaved task input.',
+  updateAvailableTitle: 'TaskMint update ready',
+  updateAvailableBody: 'Save any task draft, then update when you are ready to reload.',
+  updateNow: 'Update now',
+  updateLater: 'Later',
+  updateFailed: 'Could not activate the update. Your local data was left unchanged.',
   reloadTaskMint: 'Reload TaskMint',
   about: 'About',
   mitLicense: 'MIT License',

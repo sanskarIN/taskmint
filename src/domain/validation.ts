@@ -1,3 +1,4 @@
+import { TASK_LIMITS } from './limits';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from './types';
 
 const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
@@ -9,7 +10,9 @@ export function validateBackup(input: unknown): TaskBackup {
   if (input.app !== 'TaskMint' || input.schemaVersion !== 2 || !Array.isArray(input.tasks)) {
     throw new Error('Unsupported or invalid TaskMint backup.');
   }
-  if (input.tasks.length > 100_000) throw new Error('Backup contains too many tasks.');
+  if (input.tasks.length > TASK_LIMITS.backupTasks) {
+    throw new Error('Backup contains too many tasks.');
+  }
 
   const tasks = input.tasks.map(validateTask);
   const seenIds = new Set<string>();
@@ -19,10 +22,7 @@ export function validateBackup(input: unknown): TaskBackup {
   }
 
   const settings = input.settings === undefined ? undefined : validateSettings(input.settings);
-  const exportedAt =
-    input.exportedAt === undefined
-      ? new Date().toISOString()
-      : validateTimestamp(input.exportedAt, 'exportedAt');
+  const exportedAt = validateTimestamp(input.exportedAt, 'exportedAt');
 
   return {
     app: 'TaskMint',
@@ -37,10 +37,16 @@ export function validateTask(value: unknown): Task {
   if (!isRecord(value)) throw new Error('Invalid task in backup.');
 
   const id = string(value.id, 'id').trim();
-  if (!id || id.length > 100) throw new Error('Invalid task id.');
+  if (!id || id.length > TASK_LIMITS.id) throw new Error('Invalid task id.');
 
   const title = string(value.title, 'title').trim();
-  if (!title || title.length > 240) throw new Error('Invalid task title.');
+  if (!title || title.length > TASK_LIMITS.title) throw new Error('Invalid task title.');
+
+  const notes = string(value.notes, 'notes');
+  if (notes.length > TASK_LIMITS.notes) throw new Error('Task notes are too long.');
+
+  const project = string(value.project, 'project').trim();
+  if (project.length > TASK_LIMITS.project) throw new Error('Task project is too long.');
 
   const priority = string(value.priority, 'priority') as Priority;
   const recurrence = string(value.recurrence, 'recurrence') as Recurrence;
@@ -54,25 +60,22 @@ export function validateTask(value: unknown): Task {
   if (status === 'active' && (completedAt || archivedAt)) {
     throw new Error('Active task contains incompatible completion/archive timestamps.');
   }
-  if (status === 'completed' && !completedAt) {
-    throw new Error('Completed task is missing completedAt.');
+  if (status === 'completed' && (!completedAt || archivedAt)) {
+    throw new Error('Completed task contains incompatible completion/archive timestamps.');
   }
   if (status === 'archived' && !archivedAt) {
     throw new Error('Archived task is missing archivedAt.');
   }
 
-  const tags = Array.isArray(value.tags)
-    ? [
-        ...new Set(
-          value.tags
-            .map((tag) => {
-              if (typeof tag !== 'string') throw new Error('Invalid task tag.');
-              return tag.trim().toLocaleLowerCase().slice(0, 32);
-            })
-            .filter(Boolean)
-        )
-      ].slice(0, 12)
-    : [];
+  if (!Array.isArray(value.tags)) throw new Error('Invalid task tags.');
+  const normalizedTags = value.tags.map((tag) => {
+    if (typeof tag !== 'string') throw new Error('Invalid task tag.');
+    const normalized = tag.trim().toLocaleLowerCase();
+    if (!normalized || normalized.length > TASK_LIMITS.tag) throw new Error('Invalid task tag.');
+    return normalized;
+  });
+  const tags = [...new Set(normalizedTags)];
+  if (tags.length > TASK_LIMITS.tags) throw new Error('Task contains too many tags.');
 
   const order = value.order;
   if (typeof order !== 'number' || !Number.isFinite(order)) throw new Error('Invalid task order.');
@@ -80,12 +83,12 @@ export function validateTask(value: unknown): Task {
   return {
     id,
     title,
-    notes: string(value.notes, 'notes').slice(0, 20_000),
+    notes,
     priority,
     dueDate: nullableDate(value.dueDate, 'dueDate'),
     reminderAt: nullableTimestamp(value.reminderAt, 'reminderAt'),
     tags,
-    project: string(value.project, 'project').trim().slice(0, 80),
+    project,
     recurrence,
     status,
     completedAt,

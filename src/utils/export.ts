@@ -76,7 +76,6 @@ export function csvToTasks(csv: string, firstOrder = Date.now()): Task[] {
   if (csv.length > TASK_LIMITS.importBytes) fail('csv-file-too-large');
   const rows = parseCsv(csv);
   if (rows.length === 0) return [];
-  if (rows.length - 1 > TASK_LIMITS.backupTasks) fail('csv-too-many-tasks');
 
   const headers =
     rows[0]?.map((header, index) => {
@@ -90,11 +89,15 @@ export function csvToTasks(csv: string, firstOrder = Date.now()): Task[] {
     fail('csv-duplicate-columns', { columns: [...new Set(duplicates)] });
   }
 
-  return rows
+  const dataRows = rows
     .slice(1)
     .map((row, index) => ({ row, rowNumber: index + 2 }))
-    .filter(({ row }) => row.some((cell) => cell.trim() !== ''))
-    .map(({ row, rowNumber }, index) => parseCsvTask(row, headers, rowNumber, firstOrder + index));
+    .filter(({ row }) => row.some((cell) => cell.trim() !== ''));
+  if (dataRows.length > TASK_LIMITS.backupTasks) fail('csv-too-many-tasks');
+
+  return dataRows.map(({ row, rowNumber }, index) =>
+    parseCsvTask(row, headers, rowNumber, firstOrder + index)
+  );
 }
 
 export function downloadText(filename: string, content: string, type: string): void {

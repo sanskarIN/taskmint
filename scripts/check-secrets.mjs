@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-const roots = ['src', 'tests', 'e2e', 'docs', '.github', 'scripts', 'public'];
+const roots = ['src', 'tests', 'e2e', 'bench', 'docs', '.github', 'scripts', 'public'];
 const rootFiles = [
   'README.md',
   'CONTRIBUTING.md',

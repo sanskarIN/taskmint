@@ -25,7 +25,7 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 
 `tests/security-config.test.ts` locks the committed production CSP to self-restricted scripts/styles/connections and rejects accidental development WebSocket or inline-style allowances in the built HTML source.
 
-## Data portability
+## Data portability and generated properties
 
 `tests/export.test.ts` covers:
 
@@ -35,10 +35,14 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - malformed timestamp rejection
 - oversized backup-field rejection
 - CSV quoting and multiline round trips
+- lossless structured tag encoding, including tags containing the legacy `|` separator
+- backward-compatible legacy pipe-separated tag imports
 - deterministic stress round trips with commas, quotes, CR/LF content, Unicode, tags, projects, priorities, and recurrence
 - UTF-8 BOM headers
 - malformed enum/date rejection
 - duplicate CSV-column rejection
+
+`tests/property.test.ts` uses seeded deterministic generation rather than production randomness to exercise hundreds of CSV/JSON round trips containing quotes, commas, CR/LF, Unicode, pipes, brackets, and other parser-sensitive characters. It also checks malformed structured-tag payloads. The fixed seeds make every failure reproducible.
 
 `tests/download.test.ts` verifies that export download clicks occur before object-URL cleanup and that cleanup is deferred to the next timer turn for browser compatibility.
 
@@ -64,11 +68,21 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
+## Performance benchmark
+
+`bench/task.bench.ts` provides a repeatable 10,000-task benchmark for filtering/sorting and statistics. Run it separately from pass/fail tests:
+
+```bash
+npm run bench
+```
+
+Benchmark timings are diagnostic rather than CI pass/fail thresholds because runner hardware and load vary. See `docs/performance.md` for comparison guidance.
+
 ## Deterministic repository checks
 
-- `npm run format:check` rejects CRLF drift, missing final newlines, and trailing whitespace across tracked text paths.
+- `npm run format:check` rejects CRLF drift, missing final newlines, and trailing whitespace across tracked text paths, including `bench/`.
 - `npm run docs:check` resolves repository-relative Markdown links and rejects links that escape the repository or point to missing local targets.
-- `npm run secrets:check` scans tracked text paths for common private-key and credential-token patterns without sending repository content to a third-party service.
+- `npm run secrets:check` scans tracked text paths, including benchmarks, for common private-key and credential-token patterns without sending repository content to a third-party service.
 
 These checks intentionally require only Node.js and can run before npm dependencies are available.
 

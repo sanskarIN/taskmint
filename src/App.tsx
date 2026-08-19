@@ -9,6 +9,7 @@ import { Toolbar } from './components/Toolbar';
 import { TASK_PAGE_SIZE } from './config';
 import { fail } from './domain/errors';
 import { TASK_LIMITS } from './domain/limits';
+import { nextTaskOrder } from './domain/order';
 import {
   archiveTask,
   calculateStats,
@@ -214,7 +215,7 @@ export default function App() {
       return;
     }
 
-    const task = createTask(draft, new Date(), nextOrder(tasks));
+    const task = createTask(draft, new Date(), nextTaskOrder(tasks));
     try {
       await repository.putTask(task);
     } catch (error) {
@@ -581,10 +582,6 @@ export default function App() {
       />
     </div>
   );
-}
-
-function nextOrder(tasks: Task[]): number {
-  return Math.max(0, ...tasks.map((task) => task.order)) + 1000;
 }
 
 function viewTitle(filters: TaskFilters): string {

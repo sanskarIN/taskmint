@@ -1,6 +1,7 @@
 import { parseStrictDateTime } from './datetime';
 import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
+import { compareTaskOrder } from './order';
 import type {
   ProductivityStats,
   Recurrence,
@@ -152,7 +153,7 @@ export function filterAndSortTasks(tasks: Task[], filters: TaskFilters, now = ne
         return a.title.localeCompare(b.title);
       case 'manual':
       default:
-        return a.order - b.order;
+        return compareTaskOrder(a, b);
     }
   });
 }
@@ -163,7 +164,7 @@ export function reorderVisibleTasks(
   targetId: string,
   now = new Date()
 ): Task[] {
-  const ordered = [...tasks].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const ordered = [...tasks].sort(compareTaskOrder);
   const sourceIndex = ordered.findIndex((task) => task.id === sourceId);
   const targetIndex = ordered.findIndex((task) => task.id === targetId);
   if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return [];

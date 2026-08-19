@@ -1,13 +1,13 @@
 # TaskMint v0.1 RC2 Verification
 
-This document exists to provide a minimal pull-request delta that triggers all pull-request quality gates against the complete current release-candidate source tree.
+This document exists to provide a minimal pull-request delta that triggers all pull-request quality gates against the complete current release-candidate source tree. This update re-synchronizes the PR after notification-delivery hardening and its regression test landed on `main`.
 
 ## Automated gates required before `v0.1.0`
 
 - [ ] CI formatting invariants
 - [ ] ESLint
 - [ ] TypeScript project checks
-- [ ] Vitest unit/component/parser regression suite
+- [ ] Vitest unit/component/parser/keyboard/notification regression suite
 - [ ] Production Vite/PWA build
 - [ ] High-severity npm dependency audit
 - [ ] Chromium Playwright E2E suite

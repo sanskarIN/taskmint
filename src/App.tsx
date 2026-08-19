@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Onboarding } from './components/Onboarding';
+import { SettingsDialog } from './components/SettingsDialog';
+import { Sidebar } from './components/Sidebar';
+import { StatsPanel } from './components/StatsPanel';
 import { TaskComposer } from './components/TaskComposer';
 import { TaskItem } from './components/TaskItem';
-import { Sidebar } from './components/Sidebar';
 import { Toolbar } from './components/Toolbar';
-import { StatsPanel } from './components/StatsPanel';
-import { SettingsDialog } from './components/SettingsDialog';
-import { Onboarding } from './components/Onboarding';
+import { TASK_LIMITS } from './domain/limits';
 import {
   archiveTask,
   calculateStats,
@@ -19,11 +20,12 @@ import {
   updateTask
 } from './domain/task';
 import type { AppSettings, SmartView, Task, TaskDraft, TaskFilters } from './domain/types';
-import { repository, defaultSettings } from './storage/repository';
+import { strings } from './i18n/en';
+import { defaultSettings, repository } from './storage/repository';
 import { csvToTasks, downloadText, parseBackup, serializeBackup, tasksToCsv } from './utils/export';
+import { isEditableTarget, resolveGlobalShortcut } from './utils/keyboard';
 import { logError, logEvent } from './utils/logger';
 import { notifyDueTasks, requestNotificationPermission } from './utils/notifications';
-import { strings } from './i18n/en';
 
 const defaultFilters: TaskFilters = {
   search: '',
@@ -52,6 +54,8 @@ export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const draggedTask = useRef<Task | null>(null);
   const notifiedIds = useRef(new Set<string>());
+  const searchInput = useRef<HTMLInputElement>(null);
+  const taskTitleInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +67,7 @@ export default function App() {
       })
       .catch((error: unknown) => {
         logError('load_failed', error);
-        setToast({ message: 'Could not load local data. Try reloading TaskMint.' });
+        setToast({ message: strings.loadFailed });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -97,6 +101,31 @@ export default function App() {
       window.removeEventListener('offline', offlineHandler);
     };
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const shortcut = resolveGlobalShortcut({
+        key: event.key,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        editableTarget: isEditableTarget(event.target),
+        blocked: settingsOpen || !settings.onboardingComplete
+      });
+      if (!shortcut) return;
+      if (shortcut === 'new-task' && editingTask) return;
+      event.preventDefault();
+      if (shortcut === 'search') {
+        searchInput.current?.focus();
+        searchInput.current?.select();
+      } else {
+        taskTitleInput.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editingTask, settings.onboardingComplete, settingsOpen]);
 
   useEffect(() => {
     if (!settings.notificationsEnabled) return;
@@ -146,33 +175,32 @@ export default function App() {
         await repository.putTask(next);
       } catch (error) {
         logError('task_update_failed', error);
-        throw new Error('Could not save the task to local storage.');
+        throw new Error(strings.taskSavedError);
       }
       setTasks((current) => current.map((task) => (task.id === next.id ? next : task)));
       setEditingTask(null);
-      setToast({ message: 'Task updated.' });
+      setToast({ message: strings.taskUpdated });
       logEvent('task_updated', { taskId: next.id });
       return;
     }
+
     const task = createTask(draft, new Date(), nextOrder(tasks));
     try {
       await repository.putTask(task);
     } catch (error) {
       logError('task_create_failed', error);
-      throw new Error('Could not save the task to local storage.');
+      throw new Error(strings.taskSavedError);
     }
     setTasks((current) => [...current, task]);
-    setToast({ message: 'Task added.' });
+    setToast({ message: strings.taskAdded });
     logEvent('task_created', { taskId: task.id });
   }
 
   async function toggleTask(task: Task) {
     if (task.status === 'completed') {
       const next = reopenTask(task);
-      const saved = await runUserAction(
-        'task_reopen_failed',
-        'Could not reopen the task. Your local data was left unchanged.',
-        () => repository.putTask(next)
+      const saved = await runUserAction('task_reopen_failed', strings.taskReopenError, () =>
+        repository.putTask(next)
       );
       if (!saved) return;
       replaceLocal(next);
@@ -180,34 +208,26 @@ export default function App() {
       return;
     }
     if (task.status !== 'active') return;
+
     const result = completeTask(task);
-    const saved = await runUserAction(
-      'task_complete_failed',
-      'Could not complete the task. Your local data was left unchanged.',
-      () =>
-        result.next
-          ? repository.putTasks([result.completed, result.next])
-          : repository.putTask(result.completed)
+    const saved = await runUserAction('task_complete_failed', strings.taskCompleteError, () =>
+      result.next
+        ? repository.putTasks([result.completed, result.next])
+        : repository.putTask(result.completed)
     );
     if (!saved) return;
     setTasks((current) => [
       ...current.map((item) => (item.id === result.completed.id ? result.completed : item)),
       ...(result.next ? [result.next] : [])
     ]);
-    setToast({
-      message: result.next
-        ? 'Task completed. Next occurrence created.'
-        : 'Task completed.'
-    });
+    setToast({ message: result.next ? strings.recurringTaskCompleted : strings.taskCompleted });
     logEvent('task_completed', { taskId: result.completed.id, recurring: Boolean(result.next) });
   }
 
   async function archive(task: Task) {
     const next = archiveTask(task);
-    const saved = await runUserAction(
-      'task_archive_failed',
-      'Could not archive the task. Your local data was left unchanged.',
-      () => repository.putTask(next)
+    const saved = await runUserAction('task_archive_failed', strings.taskArchiveError, () =>
+      repository.putTask(next)
     );
     if (!saved) return;
     replaceLocal(next);
@@ -216,10 +236,8 @@ export default function App() {
 
   async function restore(task: Task) {
     const next = restoreTask(task);
-    const saved = await runUserAction(
-      'task_restore_failed',
-      'Could not restore the task. Your local data was left unchanged.',
-      () => repository.putTask(next)
+    const saved = await runUserAction('task_restore_failed', strings.taskRestoreError, () =>
+      repository.putTask(next)
     );
     if (!saved) return;
     replaceLocal(next);
@@ -227,26 +245,24 @@ export default function App() {
   }
 
   async function remove(task: Task) {
-    const deleted = await runUserAction(
-      'task_delete_failed',
-      'Could not delete the task. Your local data was left unchanged.',
-      () => repository.deleteTask(task.id)
+    const deleted = await runUserAction('task_delete_failed', strings.taskDeleteError, () =>
+      repository.deleteTask(task.id)
     );
     if (!deleted) return;
     setTasks((current) => current.filter((item) => item.id !== task.id));
     setEditingTask((current) => (current?.id === task.id ? null : current));
     setToast({
-      message: 'Task deleted.',
-      actionLabel: 'Undo',
+      message: strings.taskDeleted,
+      actionLabel: strings.undo,
       action: async () => {
         const restored = await runUserAction(
           'task_delete_undo_failed',
-          'Could not undo deletion. Restore the task from a backup if needed.',
+          strings.taskDeleteUndoError,
           () => repository.putTask(task)
         );
         if (!restored) return;
         setTasks((current) => [...current, task]);
-        setToast({ message: 'Task restored.' });
+        setToast({ message: strings.taskRestored });
       }
     });
     logEvent('task_deleted', { taskId: task.id });
@@ -261,10 +277,8 @@ export default function App() {
     if (!target) return;
     const moved = { ...task, order: target.order, updatedAt: new Date().toISOString() };
     const swapped = { ...target, order: task.order, updatedAt: new Date().toISOString() };
-    const saved = await runUserAction(
-      'task_keyboard_reorder_failed',
-      'Could not reorder tasks. Your local data was left unchanged.',
-      () => repository.putTasks([moved, swapped])
+    const saved = await runUserAction('task_keyboard_reorder_failed', strings.taskReorderError, () =>
+      repository.putTasks([moved, swapped])
     );
     if (!saved) return;
     setTasks((current) =>
@@ -287,10 +301,8 @@ export default function App() {
     const activeVisibleTasks = visibleTasks.filter((task) => task.status === 'active');
     const changed = reorderVisibleTasks(activeVisibleTasks, source.id, target.id);
     if (!changed.length) return;
-    const saved = await runUserAction(
-      'task_drag_reorder_failed',
-      'Could not reorder tasks. Your local data was left unchanged.',
-      () => repository.putTasks(changed)
+    const saved = await runUserAction('task_drag_reorder_failed', strings.taskReorderError, () =>
+      repository.putTasks(changed)
     );
     if (!saved) return;
     const changedById = new Map(changed.map((task) => [task.id, task]));
@@ -302,7 +314,7 @@ export default function App() {
       await repository.saveSettings(next);
     } catch (error) {
       logError('settings_save_failed', error);
-      throw new Error('Could not save settings to local storage.');
+      throw new Error(strings.settingsStorageError);
     }
     setSettings(next);
   }
@@ -314,30 +326,23 @@ export default function App() {
   async function enableNotifications() {
     const enabled = await requestNotificationPermission();
     await changeSettings({ ...settings, notificationsEnabled: enabled });
-    setToast({
-      message: enabled ? 'Browser reminders enabled.' : 'Notifications were not enabled.'
-    });
+    setToast({ message: enabled ? strings.remindersEnabled : strings.remindersNotEnabled });
   }
 
   async function importJson(file: File) {
     try {
       const backup = parseBackup(await readFile(file));
-      if (
-        tasks.length > 0 &&
-        !window.confirm(
-          `Restore ${backup.tasks.length} tasks and replace the ${tasks.length} tasks currently stored in TaskMint?`
-        )
-      ) {
+      if (tasks.length > 0 && !window.confirm(strings.restoreConfirm(backup.tasks.length, tasks.length))) {
         return;
       }
       await repository.restoreBackup(backup);
       notifiedIds.current.clear();
       setTasks(backup.tasks);
       if (backup.settings) setSettings(backup.settings);
-      setToast({ message: `Restored ${backup.tasks.length} tasks.` });
+      setToast({ message: strings.restoredTasks(backup.tasks.length) });
     } catch (error) {
       logError('json_import_failed', error);
-      setToast({ message: error instanceof Error ? error.message : 'Could not import backup.' });
+      setToast({ message: error instanceof Error ? error.message : strings.importBackupError });
     }
   }
 
@@ -346,32 +351,24 @@ export default function App() {
       const imported = csvToTasks(await readFile(file));
       await repository.putTasks(imported);
       setTasks((current) => [...current, ...imported]);
-      setToast({ message: `Imported ${imported.length} tasks.` });
+      setToast({ message: strings.importedTasks(imported.length) });
     } catch (error) {
       logError('csv_import_failed', error);
-      setToast({ message: error instanceof Error ? error.message : 'Could not import CSV.' });
+      setToast({ message: error instanceof Error ? error.message : strings.importCsvError });
     }
   }
 
   async function deleteAllData() {
-    if (
-      !window.confirm(
-        'Delete every TaskMint task and local setting from this browser? This cannot be undone unless you have a backup.'
-      )
-    ) {
-      return;
-    }
-    const deleted = await runUserAction(
-      'delete_all_data_failed',
-      'Could not delete all local data. Your existing data was left in place.',
-      () => repository.deleteAllLocalData()
+    if (!window.confirm(strings.deleteAllConfirm)) return;
+    const deleted = await runUserAction('delete_all_data_failed', strings.deleteAllError, () =>
+      repository.deleteAllLocalData()
     );
     if (!deleted) return;
     notifiedIds.current.clear();
     setTasks([]);
     setSettings({ ...defaultSettings, onboardingComplete: true });
     setEditingTask(null);
-    setToast({ message: 'All local TaskMint data was deleted.' });
+    setToast({ message: strings.deleteAllSuccess });
   }
 
   function replaceLocal(next: Task) {
@@ -386,7 +383,7 @@ export default function App() {
     return (
       <main className="loading-state" aria-busy="true">
         <img src="/taskmint-icon.svg" width="56" height="56" alt="" />
-        <p>Loading your local tasks…</p>
+        <p>{strings.loadingLocalTasks}</p>
       </main>
     );
   }
@@ -395,7 +392,7 @@ export default function App() {
     <div className="app-shell">
       {!settings.onboardingComplete && <Onboarding onComplete={finishOnboarding} />}
       <header className="topbar">
-        <a className="brand" href="/" aria-label="TaskMint home">
+        <a className="brand" href="/" aria-label={`${strings.appName} home`}>
           <img src="/taskmint-icon.svg" width="36" height="36" alt="" />
           <span>
             <strong>{strings.appName}</strong>
@@ -403,7 +400,7 @@ export default function App() {
           </span>
         </a>
         <div className="top-actions">
-          {offline && <span className="offline-badge">Offline</span>}
+          {offline && <span className="offline-badge">{strings.offline}</span>}
           <button
             className="secondary"
             type="button"
@@ -431,6 +428,7 @@ export default function App() {
         <main className="main-content">
           <TaskComposer
             editingTask={editingTask}
+            titleInputRef={taskTitleInput}
             onSubmit={saveDraft}
             onCancelEdit={() => setEditingTask(null)}
           />
@@ -440,6 +438,7 @@ export default function App() {
             tag={filters.tag}
             sort={filters.sort}
             tags={tags}
+            searchInputRef={searchInput}
             onSearch={(search) => setFilters((current) => ({ ...current, search }))}
             onPriority={(priority) => setFilters((current) => ({ ...current, priority }))}
             onTag={(tag) => setFilters((current) => ({ ...current, tag }))}
@@ -450,9 +449,7 @@ export default function App() {
           <section className="task-section" aria-labelledby="task-list-title">
             <div className="section-heading">
               <h1 id="task-list-title">{viewTitle(filters)}</h1>
-              <span>
-                {visibleTasks.length} {visibleTasks.length === 1 ? 'task' : 'tasks'}
-              </span>
+              <span>{strings.taskCount(visibleTasks.length)}</span>
             </div>
             {visibleTasks.length === 0 ? (
               <div className="empty-state card">
@@ -494,10 +491,10 @@ export default function App() {
       <footer className="footer">
         <span>{strings.madeBy}</span>
         <a href="https://github.com/sanskarIN/taskmint" target="_blank" rel="noreferrer">
-          Source code
+          {strings.sourceCode}
         </a>
         <a href="https://buymeacoffee.com/sanskarIN" target="_blank" rel="noreferrer">
-          Buy Me a Coffee
+          {strings.buyMeACoffee}
         </a>
       </footer>
 
@@ -506,7 +503,7 @@ export default function App() {
           <span>{toast.message}</span>
           {toast.action && (
             <button type="button" onClick={() => void toast.action?.()}>
-              {toast.actionLabel ?? 'Undo'}
+              {toast.actionLabel ?? strings.undo}
             </button>
           )}
         </div>
@@ -547,18 +544,18 @@ function nextOrder(tasks: Task[]): number {
 function viewTitle(filters: TaskFilters): string {
   if (filters.project) return filters.project;
   const labels: Record<SmartView, string> = {
-    inbox: 'Inbox',
-    today: 'Today',
-    upcoming: 'Upcoming',
-    overdue: 'Overdue',
-    completed: 'Completed',
-    archived: 'Archived',
-    all: 'All tasks'
+    inbox: strings.viewInbox,
+    today: strings.viewToday,
+    upcoming: strings.viewUpcoming,
+    overdue: strings.viewOverdue,
+    completed: strings.viewCompleted,
+    archived: strings.viewArchived,
+    all: strings.viewAll
   };
   return labels[filters.view];
 }
 
 async function readFile(file: File): Promise<string> {
-  if (file.size > 25_000_000) throw new Error('Import file is too large.');
+  if (file.size > TASK_LIMITS.importBytes) throw new Error(strings.importTooLarge);
   return file.text();
 }

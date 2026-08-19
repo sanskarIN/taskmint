@@ -50,10 +50,11 @@ Core references:
 - [Setup](docs/setup.md) — environment, install, build, browser/E2E, local PWA/storage inspection.
 - [Architecture](docs/architecture.md) — runtime layers, data flow, persistence, concurrency, failures, PWA/security boundaries.
 - [Data model](docs/data-model.md) — exact Task/Settings/Backup contracts, IndexedDB versions, JSON v2, CSV `safe-text-v1`.
-- [Repository reference](docs/repository-reference.md) — exhaustive file-by-file map of the current repository.
+- [Complete file index](docs/file-index.md) — machine-audited inventory of every tracked repository file.
+- [Repository reference](docs/repository-reference.md) — detailed ownership and coupling map for repository subsystems/files.
 - [Development guide](docs/development.md) — implementation rules and change discipline.
 - [Testing guide](docs/testing.md) — strategy and commands.
-- [Test matrix](docs/test-matrix.md) — every current test/E2E/benchmark/support file and its responsibility.
+- [Test matrix](docs/test-matrix.md) — every current test/E2E/benchmark/shared-test-setup file and its responsibility.
 - [Operations handbook](docs/operations.md) — scripts, CI, E2E, CodeQL, release workflow, lockfile/CSP/PWA operations, exact-SHA verification.
 - [Accessibility](docs/accessibility.md), [performance](docs/performance.md), [release](docs/release.md), [troubleshooting](docs/troubleshooting.md), and [GitHub governance](docs/github.md).
 - [Architecture Decision Records](docs/adr/) — durable rationale for local-first, repository boundary, validation, mutation serialization, and portability versioning.
@@ -72,6 +73,18 @@ Repository policies:
 Current engineering/release handoff:
 
 - [what_changed.md](what_changed.md)
+
+## Documentation completeness
+
+TaskMint treats documentation completeness as a repository invariant.
+
+```bash
+npm run docs:inventory
+```
+
+The dependency-free inventory checker compares the real tracked file set from `git ls-files` against `docs/file-index.md` and also verifies that every test/E2E/benchmark/shared-test-setup path is present in `docs/test-matrix.md`.
+
+This check is part of `npm run check` and the CI quality workflow, so adding a tracked file without updating the documentation inventory is intended to fail verification.
 
 ## Keyboard shortcuts
 
@@ -130,11 +143,12 @@ npm run check
 
 ## Quality checks
 
-Individual checks:
+Individual deterministic/source checks:
 
 ```bash
 npm run format:check
 npm run docs:check
+npm run docs:inventory
 npm run secrets:check
 npm run lint
 npm run typecheck
@@ -147,6 +161,8 @@ Combined non-E2E suite:
 ```bash
 npm run check
 ```
+
+Current `npm run check` order is format -> documentation links -> documentation inventory -> secret patterns -> lint -> typecheck -> Vitest -> production build.
 
 Dependency audit:
 
@@ -167,7 +183,7 @@ Non-gating 10,000-task domain benchmark:
 npm run bench
 ```
 
-See [docs/testing.md](docs/testing.md) and [docs/test-matrix.md](docs/test-matrix.md).
+See [docs/testing.md](docs/testing.md), [docs/test-matrix.md](docs/test-matrix.md), and [docs/operations.md](docs/operations.md).
 
 ## Production build and PWA preview
 
@@ -189,7 +205,7 @@ TaskMint is a layered client-side application:
 5. `src/components/` — accessible presentation and local interaction locks.
 6. `src/App.tsx` — application state/use-case orchestration, persistence-first task flows, App-wide task mutation exclusion, browser effects.
 
-See [docs/architecture.md](docs/architecture.md) and [docs/repository-reference.md](docs/repository-reference.md).
+See [docs/architecture.md](docs/architecture.md), [docs/repository-reference.md](docs/repository-reference.md), and [docs/file-index.md](docs/file-index.md).
 
 ## Data ownership and portability
 

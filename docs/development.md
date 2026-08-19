@@ -7,8 +7,9 @@
 - `npm run docs:check` — verify repository-relative Markdown links resolve inside the repository
 - `npm run secrets:check` — scan tracked text paths for common committed-secret patterns
 - `npm run lint` — strict type-aware ESLint
-- `npm run typecheck` — TypeScript project checks
-- `npm test` — Vitest unit/component tests
+- `npm run typecheck` — TypeScript project checks, including benchmarks
+- `npm test` — Vitest unit/component/property tests
+- `npm run bench` — non-gating 10,000-task Vitest domain benchmarks
 - `npm run test:e2e` — Playwright Chromium journey tests
 - `npm run build` — production build
 - `npm run check` — complete local quality suite, including formatting, docs, secret guard, lint, types, tests, and build
@@ -30,6 +31,9 @@
 
 - JSON is the full-fidelity backup/restore format.
 - CSV is a human-readable interchange format and does not preserve original completion/archive timestamps.
+- New CSV exports encode tags as a `json:`-prefixed JSON array so valid tag text such as `ci|cd` round-trips without delimiter loss.
+- Continue accepting legacy pipe-separated tag cells for backwards compatibility.
+- Reject malformed structured CSV tag payloads instead of silently coercing them.
 - Reject malformed CSV enum/date values rather than silently coercing them.
 - Validate an entire JSON backup before replacing current IndexedDB data.
 - Keep import byte/task-count limits aligned with `TASK_LIMITS`.

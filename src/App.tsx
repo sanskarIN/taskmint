@@ -56,6 +56,7 @@ export default function App() {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [visibleLimit, setVisibleLimit] = useState(TASK_PAGE_SIZE);
+  const [now, setNow] = useState(() => new Date());
   const draggedTask = useRef<Task | null>(null);
   const notifiedIds = useRef(new Set<string>());
   const searchInput = useRef<HTMLInputElement>(null);
@@ -107,6 +108,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const shortcut = resolveGlobalShortcut({
         key: event.key,
@@ -151,19 +164,22 @@ export default function App() {
     setVisibleLimit(TASK_PAGE_SIZE);
   }, [filters]);
 
-  const visibleTasks = useMemo(() => filterAndSortTasks(tasks, filters), [tasks, filters]);
+  const visibleTasks = useMemo(
+    () => filterAndSortTasks(tasks, filters, now),
+    [filters, now, tasks]
+  );
   const renderedTasks = useMemo(
     () => visibleTasks.slice(0, visibleLimit),
     [visibleLimit, visibleTasks]
   );
   const remainingTasks = Math.max(0, visibleTasks.length - renderedTasks.length);
-  const stats = useMemo(() => calculateStats(tasks), [tasks]);
+  const stats = useMemo(() => calculateStats(tasks, now), [now, tasks]);
   const projects = useMemo(
     () => [...new Set(tasks.map((task) => task.project).filter(Boolean))].sort(),
     [tasks]
   );
   const tags = useMemo(() => [...new Set(tasks.flatMap((task) => task.tags))].sort(), [tasks]);
-  const today = formatLocalDate(new Date());
+  const today = formatLocalDate(now);
 
   async function runUserAction(
     event: string,

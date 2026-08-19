@@ -112,7 +112,7 @@ export const strings = {
   deleteAllLocalData: 'Delete all local data',
   updates: 'Updates',
   updatesDescription:
-    'Installed PWA assets update automatically when a new service worker becomes available. Reload to activate any update already waiting in this browser.',
+    'New PWA assets wait safely instead of reloading over unsaved task input. Reload TaskMint when you are ready to activate an update.',
   reloadTaskMint: 'Reload TaskMint',
   about: 'About',
   mitLicense: 'MIT License',

@@ -55,7 +55,7 @@ export function tasksToCsv(tasks: Task[]): string {
         task.priority,
         task.dueDate ?? '',
         task.reminderAt ?? '',
-        task.tags.join('|'),
+        JSON.stringify(task.tags),
         task.project,
         task.recurrence,
         task.status
@@ -122,7 +122,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
         priority,
         dueDate: value('dueDate') || null,
         reminderAt: value('reminderAt') || null,
-        tags: value('tags').split('|').filter(Boolean),
+        tags: parseCsvTags(value('tags')),
         project: value('project'),
         recurrence
       },
@@ -141,6 +141,20 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
     const causeMessage = error instanceof Error ? error.message : 'Invalid task data.';
     fail('csv-row-invalid', { row: rowNumber, causeMessage });
   }
+}
+
+function parseCsvTags(value: string): string[] {
+  if (!value) return [];
+  const trimmed = value.trim();
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed) && parsed.every((tag) => typeof tag === 'string')) return parsed;
+    } catch {
+      // Fall through to the legacy pipe-separated format for backwards compatibility.
+    }
+  }
+  return value.split('|').filter(Boolean);
 }
 
 function csvCell(value: string): string {

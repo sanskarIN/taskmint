@@ -35,6 +35,6 @@ The project follows Semantic Versioning for tagged releases.
 - Satisfy strict TypeScript override checks in the React error boundary.
 - Include E2E TypeScript files in the type-aware project and scope type-aware ESLint away from maintenance scripts.
 
-## [0.1.0] - 2026-08-19
+### Release candidate status
 
-Initial development milestone prepared for release-candidate verification. The `v0.1.0` tag must not be created until the queued hosted CI, E2E, and CodeQL checks complete successfully.
+The package version is `0.1.0`, but no `v0.1.0` release tag has been created. Promote these Unreleased changes to `0.1.0` only after hosted CI, E2E, CodeQL, production-build, and release verification complete successfully.

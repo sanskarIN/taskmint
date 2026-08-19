@@ -17,6 +17,8 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - date rollover from Today to Overdue
 - productivity statistics
 
+`tests/order.test.ts` verifies task-order allocation for an empty set, custom step, and a 100,000-entry collection without argument spreading.
+
 `tests/errors.test.ts` covers typed `TaskMintError` codes, safe default messages, malformed-JSON wrapping, row-aware CSV errors, immutable structured error details, and the UI boundary that hides unknown infrastructure messages.
 
 `tests/keyboard.test.ts` covers global shortcut resolution, modifier handling, editable-control protection, and modal blocking.
@@ -47,6 +49,8 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 - UTF-8 BOM headers
 - malformed enum/date rejection
 - duplicate CSV-column rejection
+
+`tests/csv-security.test.ts` covers formula-like spreadsheet text after leading spaces, tabs, or newlines so restored backup-shaped notes cannot bypass export neutralization.
 
 `tests/property.test.ts` uses seeded deterministic generation rather than production randomness to exercise hundreds of CSV/JSON round trips containing quotes, commas, CR/LF, Unicode, pipes, brackets, and other parser-sensitive characters. It also checks malformed structured-tag payloads. The fixed seeds make every failure reproducible.
 

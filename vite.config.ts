@@ -4,6 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
+    {
+      name: 'taskmint-dev-csp-websocket',
+      apply: 'serve',
+      transformIndexHtml(html) {
+        return html.replace("connect-src 'self';", "connect-src 'self' ws: wss:;");
+      }
+    },
     react(),
     VitePWA({
       registerType: 'autoUpdate',

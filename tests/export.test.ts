@@ -22,6 +22,34 @@ describe('data portability', () => {
     expect(imported[0]?.tags).toEqual(['home', 'errand']);
   });
 
+  it('accepts a UTF-8 BOM before the first CSV header', () => {
+    const csv =
+      '\uFEFFtitle,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      'Read docs,,medium,,,study,,none,active';
+    expect(csvToTasks(csv)[0]?.title).toBe('Read docs');
+  });
+
+  it('rejects invalid CSV enums instead of silently coercing them', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      'Read docs,,impossible,,,study,,none,active';
+    expect(() => csvToTasks(csv)).toThrow(/row 2.*priority/i);
+  });
+
+  it('rejects invalid CSV dates instead of silently dropping them', () => {
+    const csv =
+      'title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      'Read docs,,medium,2026-02-31,,study,,none,active';
+    expect(() => csvToTasks(csv)).toThrow(/row 2.*due date/i);
+  });
+
+  it('rejects duplicate CSV headers', () => {
+    const csv =
+      'title,title,notes,priority,dueDate,reminderAt,tags,project,recurrence,status\r\n' +
+      'Read docs,Other,,medium,,,study,,none,active';
+    expect(() => csvToTasks(csv)).toThrow(/duplicate columns/i);
+  });
+
   it('rejects unsupported JSON backups', () => {
     expect(() => parseBackup('{"app":"Other","schemaVersion":2,"tasks":[]}')).toThrow(
       /unsupported/i
@@ -48,5 +76,16 @@ describe('data portability', () => {
       tasks: [task]
     });
     expect(() => parseBackup(malformedBackup)).toThrow(/reminderAt/i);
+  });
+
+  it('rejects oversized backup fields instead of truncating them', () => {
+    const task = { ...createTask({ title: 'Long project' }), project: 'x'.repeat(81) };
+    const backup = JSON.stringify({
+      app: 'TaskMint',
+      schemaVersion: 2,
+      exportedAt: new Date().toISOString(),
+      tasks: [task]
+    });
+    expect(() => parseBackup(backup)).toThrow(/project/i);
   });
 });

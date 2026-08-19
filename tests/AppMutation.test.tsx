@@ -27,15 +27,14 @@ vi.mock('../src/storage/repository', () => ({
 import App from '../src/App';
 
 beforeEach(() => {
-  vi.stubGlobal('matchMedia', vi.fn());
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: vi.fn().mockReturnValue({
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockReturnValue({
       matches: false,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     })
-  });
+  );
   let id = 0;
   vi.stubGlobal('crypto', { randomUUID: () => `task-${++id}` });
   mocks.listTasks.mockReset();

@@ -26,6 +26,8 @@ The project follows Semantic Versioning for tagged releases.
 - Theme, reduced-motion, onboarding, responsive layout, About/support/funding UI, and local-data deletion.
 - Unit, component, data-portability, deterministic CSV stress/property, strict datetime/quoting/compatibility, typed-error, logger-privacy, PWA-config, download-lifecycle, repository, release-guard, keyboard, notification, CSP, migration, corrupt-local-data, offline, backup/restore, accessibility, pagination, and Chromium E2E coverage.
 - Component regression coverage for task-composer submission locks, task-row mutation locks, onboarding completion locks, serialized Settings actions, and PWA update activation locks.
+- Reusable exclusive-mutation gate with utility and App-level cross-row concurrency regression coverage.
+- Focused Sidebar and Toolbar accessibility regressions for current-state, navigation-landmark, and named filter-group semantics.
 - Seeded deterministic data-portability properties covering hundreds of parser-sensitive CSV/JSON round trips.
 - Repeatable Vitest 4 benchmark harness for 10,000-task filtering/sorting and productivity statistics.
 - Dependency-free Markdown relative-link validation through `npm run docs:check`.
@@ -53,14 +55,19 @@ The project follows Semantic Versioning for tagged releases.
 - Preserve tags containing the legacy `|` separator by using a versioned `json:` tag-cell encoding in new CSV exports while keeping legacy imports compatible.
 - Reversibly neutralize spreadsheet-formula prefixes, including whitespace-prefixed formulas, in exported task titles, notes, and project fields without altering legacy CSV import semantics.
 - Prevent arbitrary infrastructure exception messages from being wrapped into known CSV validation errors.
+- Preserve original CSV record numbers when blank records are skipped so row-aware validation errors still point to the actual source record.
+- Rebase CSV-import manual-order values after the existing maximum order and allocate imported rows contiguously, preventing valid merges from introducing duplicate order slots.
 - Wrap malformed JSON parsing in a stable safe TaskMint backup error rather than exposing engine-specific parser text.
 - Preserve recurring reminder schedules for recurring tasks that do not have a due date.
+- Allocate the next recurring occurrence from the next collision-free task-order slot supplied by the App rather than relying on clock milliseconds.
 - Bound each reminder polling pass to five individual title-bearing notifications plus one count-only summary for excess due reminders; failed individual/summary deliveries remain retryable.
 - Reject impossible calendar dates during normal task creation/update instead of silently dropping them.
 - Make every multi-task `putTasks` persistence operation explicitly transactional so import/reorder/recurring-completion failures cannot leave a partially written successful subset.
 - Surface IndexedDB failures for task create/edit/complete/reopen/archive/restore/delete/undo/reorder and local-data deletion before mutating React state.
 - Serialize task composer submissions while a save is pending so rapid repeat submit actions cannot create/update the same logical task twice.
 - Serialize task-row completion/reopen/archive/restore/delete/reorder/drop mutations while one mutation is pending, preventing duplicate recurring occurrences and competing row writes.
+- Serialize task mutations across the whole App while persistence is pending so different task cards, the composer, undo, reordering, and global entry points cannot race stale task snapshots.
+- Ensure the exclusive mutation gate releases even when entering the busy UI state throws, preserving fail-safe retryability.
 - Serialize onboarding completion, Settings/data actions, and PWA update activation while their persistence/update operations are pending.
 - Guard Settings close/Escape/backdrop dismissal with the synchronous action lock so even same-tick input cannot dismiss a pending operation.
 - Reset reminder-notification suppression only after a changed reminder is successfully persisted, preventing a failed edit from re-notifying the unchanged old reminder.
@@ -80,6 +87,8 @@ The project follows Semantic Versioning for tagged releases.
 - Centralize Vitest cleanup for DOM state, fake timers, mock histories, stubbed globals, and spies so tests cannot leak state into later cases.
 - Stop development error logging from printing arbitrary `Error.message` text; diagnostics now contain only a coarse kind or stable TaskMint error code.
 - Make development event logging fail closed: unknown strings, nested objects/arrays, and explicitly sensitive metadata keys are redacted; only booleans/numbers/null and validated identifier strings are retained.
+- Restrict logger identifier-key recognition to explicit `id`, camel/Pascal `...Id`/`...ID`, and snake-case `..._id` forms so ordinary words ending in `id` cannot accidentally expose string metadata.
+- Expose active smart views/projects with `aria-current`, keep project selectors inside the Sidebar navigation landmark, and expose the search/filter controls as a named accessibility group.
 - Replace PWA `autoUpdate` with the supported prompt/waiting flow so new service workers cannot automatically reload over an unsaved task draft; the explicit update action now activates the waiting worker through `updateServiceWorker(true)`.
 - Raise the complete/reopen and mobile action controls to the documented touch-target baseline.
 - Keep the committed production CSP at `style-src 'self'` and `connect-src 'self'`; Vite-only inline-style/WebSocket allowances are now injected only by the development server.

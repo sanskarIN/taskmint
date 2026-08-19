@@ -55,7 +55,11 @@ export function updateTask(task: Task, draft: TaskDraft, now = new Date()): Task
   };
 }
 
-export function completeTask(task: Task, now = new Date()): { completed: Task; next: Task | null } {
+export function completeTask(
+  task: Task,
+  now = new Date(),
+  nextOrder = now.getTime()
+): { completed: Task; next: Task | null } {
   const completed: Task = {
     ...task,
     status: 'completed',
@@ -63,7 +67,7 @@ export function completeTask(task: Task, now = new Date()): { completed: Task; n
     archivedAt: null,
     updatedAt: now.toISOString()
   };
-  return { completed, next: makeNextOccurrence(completed, now) };
+  return { completed, next: makeNextOccurrence(completed, now, nextOrder) };
 }
 
 export function reopenTask(task: Task, now = new Date()): Task {
@@ -94,8 +98,9 @@ export function restoreTask(task: Task, now = new Date()): Task {
   };
 }
 
-export function makeNextOccurrence(task: Task, now = new Date()): Task | null {
+export function makeNextOccurrence(task: Task, now = new Date(), order = now.getTime()): Task | null {
   if (task.recurrence === 'none') return null;
+  if (!Number.isSafeInteger(order)) fail('task-order-invalid');
   const base = task.dueDate ? parseLocalDate(task.dueDate) : startOfDay(now);
   const nextDue = addRecurrence(base, task.recurrence);
   return {
@@ -108,7 +113,7 @@ export function makeNextOccurrence(task: Task, now = new Date()): Task | null {
     archivedAt: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
-    order: now.getTime()
+    order
   };
 }
 
@@ -261,9 +266,20 @@ function normalizeProject(value: string | undefined): string {
   return project;
 }
 
+function normalizeTags(values: string[]): string[] {
+  const tags = [...new Set(values.map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+  if (tags.length > TASK_LIMITS.tags) fail('task-tags-too-many', { max: TASK_LIMITS.tags });
+  if (tags.some((tag) => tag.length > TASK_LIMITS.tag)) {
+    fail('task-tag-too-long', { max: TASK_LIMITS.tag });
+  }
+  return tags;
+}
+
 function normalizeDate(value: string | null | undefined): string | null {
   if (!value) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || formatLocalDate(parseLocalDate(value)) !== value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) fail('task-due-date-invalid');
+  const parsed = parseLocalDate(value);
+  if (Number.isNaN(parsed.getTime()) || formatLocalDate(parsed) !== value) {
     fail('task-due-date-invalid');
   }
   return value;
@@ -271,46 +287,52 @@ function normalizeDate(value: string | null | undefined): string | null {
 
 function normalizeDateTime(value: string | null | undefined): string | null {
   if (!value) return null;
-  const date = parseStrictDateTime(value);
-  if (!date) fail('task-reminder-invalid');
-  return date.toISOString();
-}
-
-function normalizeTags(tags: string[]): string[] {
-  const normalized = tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
-  for (const tag of normalized) {
-    if (tag.length > TASK_LIMITS.tag) fail('task-tag-too-long', { max: TASK_LIMITS.tag });
-  }
-  const unique = [...new Set(normalized)];
-  if (unique.length > TASK_LIMITS.tags) fail('task-tags-too-many', { max: TASK_LIMITS.tags });
-  return unique;
+  const parsed = parseStrictDateTime(value);
+  if (!parsed) fail('task-reminder-invalid');
+  return parsed.toISOString();
 }
 
 function parseLocalDate(value: string): Date {
   const [year, month, day] = value.split('-').map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1, 12, 0, 0, 0);
+  return new Date(year!, month! - 1, day!, 12, 0, 0, 0);
 }
 
 function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+  const result = new Date(date);
+  result.setHours(12, 0, 0, 0);
+  return result;
+}
+
+function addRecurrenceToReminder(reminder: Date, recurrence: Exclude<Recurrence, 'none'>): Date {
+  const result = new Date(reminder);
+  if (recurrence === 'daily') result.setDate(result.getDate() + 1);
+  if (recurrence === 'weekly') result.setDate(result.getDate() + 7);
+  if (recurrence === 'monthly') {
+    const day = result.getDate();
+    result.setDate(1);
+    result.setMonth(result.getMonth() + 1);
+    const last = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+    result.setDate(Math.min(day, last));
+  }
+  return result;
 }
 
 function moveReminder(
   reminderAt: string | null,
-  oldDueDate: string | null,
+  dueDate: string | null,
   nextDue: Date,
   recurrence: Exclude<Recurrence, 'none'>
 ): string | null {
   if (!reminderAt) return null;
   const reminder = new Date(reminderAt);
-  if (Number.isNaN(reminder.getTime())) return null;
-  if (!oldDueDate) return addRecurrence(reminder, recurrence).toISOString();
-  const oldDue = parseLocalDate(oldDueDate);
-  const offset = reminder.getTime() - oldDue.getTime();
-  return new Date(nextDue.getTime() + offset).toISOString();
+  if (dueDate) {
+    const due = parseLocalDate(dueDate);
+    const offset = reminder.getTime() - due.getTime();
+    return new Date(nextDue.getTime() + offset).toISOString();
+  }
+  return addRecurrenceToReminder(reminder, recurrence).toISOString();
 }
 
 function createId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return `task-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return crypto.randomUUID();
 }

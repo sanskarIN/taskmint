@@ -67,12 +67,12 @@ export function SettingsDialog({
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>, type: 'json' | 'csv') {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || actionLock.current) return;
     await runAction(async () => {
       if (type === 'json') await onImportJson(file);
       else await onImportCsv(file);
     });
-    event.target.value = '';
   }
 
   function closeIfIdle() {

@@ -77,4 +77,29 @@ describe('development logger privacy', () => {
       });
     }
   });
+
+  it('does not treat ordinary words ending in id as identifier metadata keys', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    logEvent('diagnostic', {
+      id: 'event-1',
+      taskId: 'task-1',
+      task_id: 'task-2',
+      valid: 'private-plan',
+      grid: 'private-grid'
+    });
+
+    const serialized = JSON.stringify(infoSpy.mock.calls);
+    expect(serialized).not.toContain('private-plan');
+    expect(serialized).not.toContain('private-grid');
+    if (import.meta.env.DEV) {
+      expect(infoSpy).toHaveBeenCalledWith('[TaskMint] diagnostic', {
+        id: 'event-1',
+        taskId: 'task-1',
+        task_id: 'task-2',
+        valid: '[REDACTED]',
+        grid: '[REDACTED]'
+      });
+    }
+  });
 });

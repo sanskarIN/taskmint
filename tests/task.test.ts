@@ -60,6 +60,19 @@ describe('task domain', () => {
     expect(result.next?.dueDate).toBe('2026-08-26');
   });
 
+  it('accepts an explicit collision-free order for the next recurring occurrence', () => {
+    const now = new Date('2026-08-19T09:00:00.000Z');
+    const original = createTask(
+      { title: 'Ordered recurrence', recurrence: 'daily' },
+      new Date('2026-08-18T09:00:00.000Z'),
+      20
+    );
+
+    const result = completeTask(original, now, 9000);
+    expect(result.next?.order).toBe(9000);
+    expect(() => completeTask(original, now, 1.5)).toThrow(/order must be a safe integer/i);
+  });
+
   it('rejects impossible calendar dates instead of dropping them silently', () => {
     expect(() => createTask({ title: 'Calendar edge', dueDate: '2026-02-31' })).toThrow(
       /due date is invalid/i

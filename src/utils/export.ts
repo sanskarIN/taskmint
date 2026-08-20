@@ -3,6 +3,7 @@ import { TASK_LIMITS } from '../domain/limits';
 import { createTask } from '../domain/task';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from '../domain/types';
 import { validateBackup } from '../domain/validation';
+import { saveTextFile } from '../platform/files';
 
 const csvHeaders = [
   'title',
@@ -72,11 +73,10 @@ export function tasksToCsv(tasks: Task[]): string {
   return rows.join('\r\n');
 }
 
-export function csvToTasks(csv: string): Task[] {
+export function csvToTasks(csv: string, firstOrder = Date.now()): Task[] {
   if (csv.length > TASK_LIMITS.importBytes) fail('csv-file-too-large');
   const rows = parseCsv(csv);
   if (rows.length === 0) return [];
-  if (rows.length - 1 > TASK_LIMITS.backupTasks) fail('csv-too-many-tasks');
 
   const headers =
     rows[0]?.map((header, index) => {
@@ -90,25 +90,26 @@ export function csvToTasks(csv: string): Task[] {
     fail('csv-duplicate-columns', { columns: [...new Set(duplicates)] });
   }
 
-  return rows
+  const dataRows = rows
     .slice(1)
-    .filter((row) => row.some((cell) => cell.trim() !== ''))
-    .map((row, index) => parseCsvTask(row, headers, index + 2));
+    .map((row, index) => ({ row, rowNumber: index + 2 }))
+    .filter(({ row }) => row.some((cell) => cell.trim() !== ''));
+  if (dataRows.length > TASK_LIMITS.backupTasks) fail('csv-too-many-tasks');
+
+  return dataRows.map(({ row, rowNumber }, index) =>
+    parseCsvTask(row, headers, rowNumber, firstOrder + index)
+  );
 }
 
-export function downloadText(filename: string, content: string, type: string): void {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+export async function downloadText(filename: string, content: string, type: string): Promise<void> {
+  const extension = filename.split('.').pop()?.toLowerCase() || 'txt';
+  await saveTextFile(filename, content, type, {
+    name: `TaskMint ${extension.toUpperCase()}`,
+    extensions: [extension]
+  });
 }
 
-function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task {
+function parseCsvTask(row: string[], headers: string[], rowNumber: number, order: number): Task {
   const value = (name: (typeof csvHeaders)[number]) => row[headers.indexOf(name)] ?? '';
   const encodingIndex = headers.indexOf(csvEncodingHeader);
   const encoding = encodingIndex >= 0 ? (row[encodingIndex] ?? '') : '';
@@ -135,7 +136,7 @@ function parseCsvTask(row: string[], headers: string[], rowNumber: number): Task
         recurrence
       },
       now,
-      now.getTime() + rowNumber
+      order
     );
     if (status === 'completed') {
       task.status = 'completed';

@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe('browser reminders', () => {
-  it('delivers a due task once and marks it as notified', () => {
+  it('delivers a due task once and marks it as notified', async () => {
     vi.stubGlobal('Notification', FakeNotification);
     const task = createTask(
       { title: 'Remember this', reminderAt: '2026-08-19T09:00:00.000Z' },
@@ -46,7 +46,11 @@ describe('browser reminders', () => {
       1000
     );
 
-    const notified = notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'));
+    const notified = await notifyDueTasks(
+      [task],
+      new Set(),
+      new Date('2026-08-19T10:00:00.000Z')
+    );
     expect(notified.has(task.id)).toBe(true);
     expect(FakeNotification.calls).toHaveLength(1);
     expect(FakeNotification.calls[0]).toMatchObject({
@@ -54,11 +58,11 @@ describe('browser reminders', () => {
       options: { body: 'Remember this', tag: `taskmint-${task.id}` }
     });
 
-    notifyDueTasks([task], notified, new Date('2026-08-19T10:01:00.000Z'));
+    await notifyDueTasks([task], notified, new Date('2026-08-19T10:01:00.000Z'));
     expect(FakeNotification.calls).toHaveLength(1);
   });
 
-  it('does not let a notification constructor failure break reminder checks', () => {
+  it('does not let a notification constructor failure break reminder checks', async () => {
     vi.stubGlobal('Notification', ThrowingNotification);
     const task = createTask(
       { title: 'Retry later', reminderAt: '2026-08-19T09:00:00.000Z' },
@@ -66,11 +70,15 @@ describe('browser reminders', () => {
       1000
     );
 
-    const notified = notifyDueTasks([task], new Set(), new Date('2026-08-19T10:00:00.000Z'));
+    const notified = await notifyDueTasks(
+      [task],
+      new Set(),
+      new Date('2026-08-19T10:00:00.000Z')
+    );
     expect(notified.has(task.id)).toBe(false);
   });
 
-  it('aggregates reminders beyond the individual batch limit', () => {
+  it('aggregates reminders beyond the individual batch limit', async () => {
     vi.stubGlobal('Notification', FakeNotification);
     const now = new Date('2026-08-19T10:00:00.000Z');
     const tasks = Array.from({ length: REMINDER_NOTIFICATION_BATCH + 7 }, (_, index) =>
@@ -81,7 +89,7 @@ describe('browser reminders', () => {
       )
     );
 
-    const notified = notifyDueTasks(tasks, new Set(), now);
+    const notified = await notifyDueTasks(tasks, new Set(), now);
 
     expect(FakeNotification.calls).toHaveLength(REMINDER_NOTIFICATION_BATCH + 1);
     expect(FakeNotification.calls.at(-1)).toMatchObject({
@@ -94,7 +102,7 @@ describe('browser reminders', () => {
     expect(notified.size).toBe(tasks.length);
   });
 
-  it('keeps summarized reminders retryable when the summary notification fails', () => {
+  it('keeps summarized reminders retryable when the summary notification fails', async () => {
     vi.stubGlobal('Notification', SummaryThrowingNotification);
     const now = new Date('2026-08-19T10:00:00.000Z');
     const tasks = Array.from({ length: REMINDER_NOTIFICATION_BATCH + 2 }, (_, index) =>
@@ -105,7 +113,7 @@ describe('browser reminders', () => {
       )
     );
 
-    const notified = notifyDueTasks(tasks, new Set(), now);
+    const notified = await notifyDueTasks(tasks, new Set(), now);
 
     expect(notified.size).toBe(REMINDER_NOTIFICATION_BATCH);
     expect(notified.has(tasks.at(-1)!.id)).toBe(false);

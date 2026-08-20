@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import type { Priority, Recurrence, Task } from '../domain/types';
 import { strings } from '../i18n/en';
 
@@ -18,6 +19,7 @@ interface Props {
   task: Task;
   isOverdue: boolean;
   canReorder: boolean;
+  disabled?: boolean;
   onToggle: (task: Task) => Promise<void>;
   onEdit: (task: Task) => void;
   onArchive: (task: Task) => Promise<void>;
@@ -32,6 +34,7 @@ export function TaskItem({
   task,
   isOverdue,
   canReorder,
+  disabled = false,
   onToggle,
   onEdit,
   onArchive,
@@ -41,13 +44,35 @@ export function TaskItem({
   onDragStart,
   onDrop
 }: Props) {
+  const mutationLock = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const interactionDisabled = busy || disabled;
+
+  async function runMutation(action: () => Promise<void>) {
+    if (mutationLock.current || disabled) return;
+    mutationLock.current = true;
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      mutationLock.current = false;
+      setBusy(false);
+    }
+  }
+
   return (
     <li
       className={`task-card card priority-${task.priority}`}
-      draggable={canReorder}
-      onDragStart={() => onDragStart(task)}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={() => onDrop(task)}
+      draggable={canReorder && !interactionDisabled}
+      aria-busy={busy}
+      aria-disabled={disabled || undefined}
+      onDragStart={() => {
+        if (!interactionDisabled) onDragStart(task);
+      }}
+      onDragOver={(event) => {
+        if (!interactionDisabled) event.preventDefault();
+      }}
+      onDrop={() => void runMutation(() => onDrop(task))}
     >
       <div className="task-row">
         <button
@@ -58,8 +83,8 @@ export function TaskItem({
               ? strings.reopenTaskLabel(task.title)
               : strings.completeTaskLabel(task.title)
           }
-          onClick={() => onToggle(task)}
-          disabled={task.status === 'archived'}
+          onClick={() => void runMutation(() => onToggle(task))}
+          disabled={interactionDisabled || task.status === 'archived'}
         >
           {task.status === 'completed' ? '✓' : ''}
         </button>
@@ -99,36 +124,58 @@ export function TaskItem({
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => onMove(task, -1)}
+                onClick={() => void runMutation(() => onMove(task, -1))}
                 aria-label={strings.moveTaskUp}
+                disabled={interactionDisabled}
               >
                 ↑
               </button>
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => onMove(task, 1)}
+                onClick={() => void runMutation(() => onMove(task, 1))}
                 aria-label={strings.moveTaskDown}
+                disabled={interactionDisabled}
               >
                 ↓
               </button>
             </>
           )}
           {task.status !== 'archived' && (
-            <button className="ghost" type="button" onClick={() => onEdit(task)}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => onEdit(task)}
+              disabled={interactionDisabled}
+            >
               {strings.edit}
             </button>
           )}
           {task.status === 'archived' ? (
-            <button className="ghost" type="button" onClick={() => onRestore(task)}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => void runMutation(() => onRestore(task))}
+              disabled={interactionDisabled}
+            >
               {strings.restore}
             </button>
           ) : (
-            <button className="ghost" type="button" onClick={() => onArchive(task)}>
+            <button
+              className="ghost"
+              type="button"
+              onClick={() => void runMutation(() => onArchive(task))}
+              disabled={interactionDisabled}
+            >
               {strings.archive}
             </button>
           )}
-          <button className="danger ghost" type="button" onClick={() => onDelete(task)}>
+          <button
+            className="danger ghost"
+            type="button"
+            onClick={() => void runMutation(() => onDelete(task))}
+            disabled={interactionDisabled}
+          >
             {strings.delete}
           </button>
         </div>

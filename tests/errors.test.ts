@@ -29,6 +29,13 @@ describe('typed user-safe errors', () => {
     );
   });
 
+  it('defines a stable duplicate-id code for repository batch failures', () => {
+    const error = new TaskMintError('task-batch-duplicate-id', { id: 'task-1' });
+    expect(error.code).toBe('task-batch-duplicate-id');
+    expect(error.message).toMatch(/duplicate task id: task-1/i);
+    expect(error.details).toEqual({ id: 'task-1' });
+  });
+
   it('wraps malformed JSON with a stable safe backup error', () => {
     expectTaskMintError(
       () => parseBackup('{not-json'),

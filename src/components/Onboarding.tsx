@@ -7,14 +7,22 @@ interface Props {
 
 export function Onboarding({ onComplete }: Props) {
   const startButton = useRef<HTMLButtonElement>(null);
+  const completionLock = useRef(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   async function start() {
+    if (completionLock.current) return;
+    completionLock.current = true;
+    setSubmitting(true);
     setError('');
     try {
       await onComplete();
     } catch {
       setError(strings.onboardingSaveError);
+    } finally {
+      completionLock.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -31,6 +39,7 @@ export function Onboarding({ onComplete }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
+        aria-busy={submitting}
         onKeyDown={keepFocusInside}
       >
         <img className="onboarding-logo" src="/taskmint-icon.svg" alt="" width="72" height="72" />
@@ -46,8 +55,9 @@ export function Onboarding({ onComplete }: Props) {
           ref={startButton}
           className="primary wide"
           type="button"
-          onClick={start}
+          onClick={() => void start()}
           autoFocus
+          disabled={submitting}
         >
           {strings.onboardingStart}
         </button>

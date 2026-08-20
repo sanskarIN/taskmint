@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 import './styles.css';
+import './platform.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('TaskMint root element was not found.');

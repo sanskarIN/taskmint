@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TaskMintError } from '../src/domain/errors';
-import { logError } from '../src/utils/logger';
+import { logError, logEvent } from '../src/utils/logger';
 
 describe('development logger privacy', () => {
   it('does not log arbitrary Error.message text', () => {
@@ -27,6 +27,78 @@ describe('development logger privacy', () => {
       expect(errorSpy).toHaveBeenCalledWith('[TaskMint] backup_failed', {
         kind: 'TaskMintError',
         code: 'backup-json-invalid'
+      });
+    }
+  });
+
+  it('keeps stable scalar diagnostics while redacting arbitrary strings and objects', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    logEvent('task_changed', {
+      taskId: 'task-123',
+      recurring: true,
+      count: 2,
+      detail: 'private task title',
+      nested: { title: 'secret plan' }
+    });
+
+    const serialized = JSON.stringify(infoSpy.mock.calls);
+    expect(serialized).not.toContain('private task title');
+    expect(serialized).not.toContain('secret plan');
+    if (import.meta.env.DEV) {
+      expect(infoSpy).toHaveBeenCalledWith('[TaskMint] task_changed', {
+        taskId: 'task-123',
+        recurring: true,
+        count: 2,
+        detail: '[REDACTED]',
+        nested: '[REDACTED]'
+      });
+    }
+  });
+
+  it('redacts unsafe identifier strings and explicitly sensitive keys', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    logEvent('task_changed', {
+      taskId: 'task-123 private title',
+      title: 'hidden title',
+      notes: 'hidden notes'
+    });
+
+    const serialized = JSON.stringify(infoSpy.mock.calls);
+    expect(serialized).not.toContain('private title');
+    expect(serialized).not.toContain('hidden title');
+    expect(serialized).not.toContain('hidden notes');
+    if (import.meta.env.DEV) {
+      expect(infoSpy).toHaveBeenCalledWith('[TaskMint] task_changed', {
+        taskId: '[REDACTED]',
+        title: '[REDACTED]',
+        notes: '[REDACTED]'
+      });
+    }
+  });
+
+  it('does not treat ordinary words ending in id as identifier metadata keys', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    logEvent('diagnostic', {
+      id: 'event-1',
+      taskId: 'task-1',
+      task_id: 'task-2',
+      valid: 'private-plan',
+      grid: 'private-grid'
+    });
+
+    const serialized = JSON.stringify(infoSpy.mock.calls);
+    expect(serialized).not.toContain('private-plan');
+    expect(serialized).not.toContain('private-grid');
+    if (import.meta.env.DEV) {
+      expect(infoSpy).toHaveBeenCalledWith('[TaskMint] diagnostic', {
+        id: 'event-1',
+        taskId: 'task-1',
+        task_id: 'task-2',
+        valid: '[REDACTED]',
+        grid: '[REDACTED]'
       });
     }
   });

@@ -28,6 +28,14 @@ jobs:
           else
             npm install --ignore-scripts
           fi
+      - name: Preserve resolved dependency lock
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-lock-${{ github.event.pull_request.head.sha || github.sha }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Format
         run: npm run format:check
       - name: Documentation links

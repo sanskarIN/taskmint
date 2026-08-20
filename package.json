@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Offline-first, privacy-friendly task manager.",
+  "packageManager": "npm@12.0.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -61,5 +62,8 @@
     "vitest": "4.1.10",
     "workbox-window": "7.4.1"
   },
-  "engines": { "node": ">=22.12" }
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "npm": ">=12.0.2 <13"
+  }
 }

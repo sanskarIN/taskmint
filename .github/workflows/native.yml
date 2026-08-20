@@ -68,6 +68,8 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install Android Rust target
+        run: rustup target add aarch64-linux-android
       - name: Configure Android NDK
         shell: bash
         run: |
@@ -95,6 +97,8 @@ jobs:
         with:
           node-version: '22'
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install iOS Rust targets
+        run: rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
       - name: Ensure CocoaPods is available
         run: command -v pod >/dev/null 2>&1 || brew install cocoapods
       - name: Install frontend dependencies

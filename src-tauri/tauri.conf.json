@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TaskMint",
+  "version": "0.1.0",
+  "identifier": "in.sanskar.taskmint",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "TaskMint",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 360,
+        "minHeight": 600,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Offline-first, privacy-friendly task manager.",
+    "longDescription": "TaskMint is an offline-first task manager for web, desktop and mobile platforms."
+  }
+}

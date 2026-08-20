@@ -223,7 +223,7 @@ export function SettingsDialog({
             disabled={actionBusy}
             onClick={() => void runAction(onEnableNotifications)}
           >
-            {strings.enableNotifications}
+            {nativeApp ? strings.enableNotifications : strings.enableBrowserNotifications}
           </button>
         </div>
 

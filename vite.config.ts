@@ -14,7 +14,18 @@ export default defineConfig({
       transformIndexHtml(html) {
         return html
           .replace("style-src 'self';", "style-src 'self' 'unsafe-inline';")
-          .replace("connect-src 'self';", "connect-src 'self' ws: wss:;");
+          .replace("connect-src 'self';", "connect-src 'self' ws: wss: ipc: http://ipc.localhost;");
+      }
+    },
+    {
+      name: 'taskmint-native-csp',
+      apply: 'build',
+      transformIndexHtml(html) {
+        if (!tauriPlatform) return html;
+        return html.replace(
+          "connect-src 'self';",
+          "connect-src 'self' ipc: http://ipc.localhost;"
+        );
       }
     },
     react(),

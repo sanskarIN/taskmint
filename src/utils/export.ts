@@ -3,6 +3,7 @@ import { TASK_LIMITS } from '../domain/limits';
 import { createTask } from '../domain/task';
 import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from '../domain/types';
 import { validateBackup } from '../domain/validation';
+import { saveTextFile } from '../platform/files';
 
 const csvHeaders = [
   'title',
@@ -100,16 +101,12 @@ export function csvToTasks(csv: string, firstOrder = Date.now()): Task[] {
   );
 }
 
-export function downloadText(filename: string, content: string, type: string): void {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+export async function downloadText(filename: string, content: string, type: string): Promise<void> {
+  const extension = filename.split('.').pop()?.toLowerCase() || 'txt';
+  await saveTextFile(filename, content, type, {
+    name: `TaskMint ${extension.toUpperCase()}`,
+    extensions: [extension]
+  });
 }
 
 function parseCsvTask(row: string[], headers: string[], rowNumber: number, order: number): Task {

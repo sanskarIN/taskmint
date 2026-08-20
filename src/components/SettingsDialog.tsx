@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { APP_VERSION } from '../config';
+import { TASK_LIMITS } from '../domain/limits';
 import type { AppSettings, ThemeMode } from '../domain/types';
 import { strings } from '../i18n/en';
+import { pickTextFile } from '../platform/files';
+import { isNativeApp } from '../platform/runtime';
 
 interface Props {
   open: boolean;
   settings: AppSettings;
   onClose: () => void;
   onChange: (settings: AppSettings) => Promise<void>;
-  onExportJson: () => void;
-  onExportCsv: () => void;
+  onExportJson: () => Promise<void>;
+  onExportCsv: () => Promise<void>;
   onImportJson: (file: File) => Promise<void>;
   onImportCsv: (file: File) => Promise<void>;
   onDeleteAll: () => Promise<void>;
@@ -35,6 +38,7 @@ export function SettingsDialog({
   const actionLock = useRef(false);
   const [actionError, setActionError] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
+  const nativeApp = isNativeApp();
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +77,35 @@ export function SettingsDialog({
       if (type === 'json') await onImportJson(file);
       else await onImportCsv(file);
     });
+  }
+
+  async function chooseImport(type: 'json' | 'csv') {
+    if (!nativeApp) {
+      if (type === 'json') jsonInput.current?.click();
+      else csvInput.current?.click();
+      return;
+    }
+
+    await runAction(
+      async () => {
+        const isJson = type === 'json';
+        const content = await pickTextFile(
+          {
+            name: isJson ? 'TaskMint JSON backup' : 'TaskMint CSV',
+            extensions: [type]
+          },
+          TASK_LIMITS.importBytes
+        );
+        if (content === null) return;
+
+        const file = new File([content], `taskmint-import.${type}`, {
+          type: isJson ? 'application/json' : 'text/csv'
+        });
+        if (isJson) await onImportJson(file);
+        else await onImportCsv(file);
+      },
+      type === 'json' ? strings.importBackupError : strings.importCsvError
+    );
   }
 
   function closeIfIdle() {
@@ -181,26 +214,30 @@ export function SettingsDialog({
 
         <div className="settings-section">
           <h3>{strings.reminders}</h3>
-          <p className="muted">{strings.remindersDescription}</p>
+          <p className="muted">
+            {nativeApp ? strings.nativeRemindersDescription : strings.remindersDescription}
+          </p>
           <button
             type="button"
             className="secondary"
             disabled={actionBusy}
             onClick={() => void runAction(onEnableNotifications)}
           >
-            {strings.enableBrowserNotifications}
+            {strings.enableNotifications}
           </button>
         </div>
 
         <div className="settings-section">
           <h3>{strings.dataPrivacy}</h3>
-          <p className="muted">{strings.dataPrivacyDescription}</p>
+          <p className="muted">
+            {nativeApp ? strings.nativeDataPrivacyDescription : strings.dataPrivacyDescription}
+          </p>
           <div className="button-row">
             <button
               type="button"
               className="secondary"
               disabled={actionBusy}
-              onClick={() => void runAction(async () => onExportJson(), strings.exportError)}
+              onClick={() => void runAction(onExportJson, strings.exportError)}
             >
               {strings.backupJson}
             </button>
@@ -208,7 +245,7 @@ export function SettingsDialog({
               type="button"
               className="secondary"
               disabled={actionBusy}
-              onClick={() => void runAction(async () => onExportCsv(), strings.exportError)}
+              onClick={() => void runAction(onExportCsv, strings.exportError)}
             >
               {strings.exportCsv}
             </button>
@@ -216,7 +253,7 @@ export function SettingsDialog({
               type="button"
               className="secondary"
               disabled={actionBusy}
-              onClick={() => jsonInput.current?.click()}
+              onClick={() => void chooseImport('json')}
             >
               {strings.restoreJson}
             </button>
@@ -224,29 +261,33 @@ export function SettingsDialog({
               type="button"
               className="secondary"
               disabled={actionBusy}
-              onClick={() => csvInput.current?.click()}
+              onClick={() => void chooseImport('csv')}
             >
               {strings.importCsv}
             </button>
           </div>
-          <input
-            ref={jsonInput}
-            className="sr-only"
-            type="file"
-            accept="application/json,.json"
-            tabIndex={-1}
-            disabled={actionBusy}
-            onChange={(event) => void handleFile(event, 'json')}
-          />
-          <input
-            ref={csvInput}
-            className="sr-only"
-            type="file"
-            accept="text/csv,.csv"
-            tabIndex={-1}
-            disabled={actionBusy}
-            onChange={(event) => void handleFile(event, 'csv')}
-          />
+          {!nativeApp && (
+            <>
+              <input
+                ref={jsonInput}
+                className="sr-only"
+                type="file"
+                accept="application/json,.json"
+                tabIndex={-1}
+                disabled={actionBusy}
+                onChange={(event) => void handleFile(event, 'json')}
+              />
+              <input
+                ref={csvInput}
+                className="sr-only"
+                type="file"
+                accept="text/csv,.csv"
+                tabIndex={-1}
+                disabled={actionBusy}
+                onChange={(event) => void handleFile(event, 'csv')}
+              />
+            </>
+          )}
           <button
             type="button"
             className="danger secondary"
@@ -259,7 +300,9 @@ export function SettingsDialog({
 
         <div className="settings-section">
           <h3>{strings.updates}</h3>
-          <p className="muted">{strings.updatesDescription}</p>
+          <p className="muted">
+            {nativeApp ? strings.nativeUpdatesDescription : strings.updatesDescription}
+          </p>
           <button
             type="button"
             className="secondary"

@@ -1,5 +1,18 @@
 # Development
 
+## Required JavaScript toolchain
+
+TaskMint pins npm so dependency resolution is reproducible across local development, browser CI, and native CI. For this release candidate, `package.json` declares npm `12.0.2` and a Node.js range compatible with that npm release; GitHub-hosted workflows use Node.js `22.23.2` exactly.
+
+Before installing dependencies, verify:
+
+```bash
+node --version
+npm --version
+```
+
+Do not work around dependency conflicts with `--force` or `--legacy-peer-deps`. Fix incompatible version constraints or the dependency graph itself, then regenerate the real npm lockfile.
+
 ## Important commands
 
 - `npm run dev` — Vite web/PWA development server
@@ -89,6 +102,8 @@ See [cross-platform.md](cross-platform.md) before working on native targets.
 - desktop checks run on Ubuntu, Windows, and macOS;
 - Android CI initializes a generated project and builds an ARM64 debug target;
 - iOS CI runs on macOS, initializes the project, and builds for the runner-compatible simulator architecture.
+
+The quality, E2E, and native workflows must install the npm version declared by `packageManager` (or the same reviewed pinned version) before resolving project dependencies. Do not rely on a runner image's bundled npm version for release evidence.
 
 Do not replace native build jobs with configuration-only checks. If a platform job must temporarily be disabled, document the reason and restore it before claiming that target is release-validated.
 

@@ -28,7 +28,7 @@ export function Toolbar({
   onSort
 }: Props) {
   return (
-    <div className="toolbar card" aria-label={strings.searchFiltersLabel}>
+    <div className="toolbar card" role="group" aria-label={strings.searchFiltersLabel}>
       <label className="search-field">
         <span className="sr-only">{strings.search}</span>
         <input

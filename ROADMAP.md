@@ -8,36 +8,51 @@ The roadmap favors coherent improvements over feature count.
 - [x] Projects, tags, priorities, notes, due dates, reminders, recurrence
 - [x] Search, smart views, filters, sorting, and deterministic manual reordering
 - [x] Safe-integer task-order allocation and duplicate-order normalization
-- [x] Global search/new-task keyboard shortcuts with modal/typing safeguards
+- [x] Collision-free order allocation for recurring occurrences and CSV merges
+- [x] Global search/new-task keyboard shortcuts with modal/typing/pending-mutation safeguards
 - [x] Date-sensitive views/statistics refresh while the app remains open
 - [x] IndexedDB persistence and schema migration
 - [x] Validated IndexedDB reads with fail-closed corrupt-data startup recovery
+- [x] Validated IndexedDB write boundaries for tasks, settings, batches, and replacements
+- [x] Full backup preflight validation before destructive restore transactions begin
+- [x] Duplicate task-ID rejection before bulk persistence
 - [x] Atomic multi-task writes for imports, recurring completion, and reordering
+- [x] App-wide exclusive task mutation gate preventing competing cross-row/task-form writes
 - [x] JSON/CSV portability and local deletion
 - [x] Lossless versioned CSV tag encoding with legacy import compatibility
 - [x] Spreadsheet-formula neutralization for user-controlled CSV text fields
 - [x] Strict CSV encoding-version and quote-placement validation
+- [x] Accurate CSV record diagnostics across skipped blank records
+- [x] Blank CSV records excluded from the task-count quota while remaining input-size bounded
 - [x] Strict calendar/timestamp parsing without JavaScript rollover acceptance
 - [x] Strict shared limits and malformed import rejection
 - [x] Stable typed validation/import error codes and safe unknown-error UI fallbacks
 - [x] Locale-independent canonical tag normalization
-- [x] Development diagnostics that omit arbitrary exception-message content
+- [x] Development diagnostics that omit arbitrary exception messages and redact unknown event metadata by default
 - [x] Bounded browser-reminder delivery with count-only aggregation for excess due reminders
+- [x] Serialized task composer, task-row, onboarding, Settings, and PWA update actions to prevent duplicate pending mutations
+- [x] Reliable same-file JSON/CSV import retry through immediate input-value clearing
 - [x] Responsive themes and accessibility baseline
+- [x] Active smart-view/project `aria-current`, named filter grouping, and complete Sidebar navigation landmark semantics
 - [x] Externalized English product string catalog
 - [x] Progressive large-list rendering
 - [x] PWA configuration with explicit waiting/update prompt instead of automatic draft-destructive reloads
 - [x] Production CSP separated from Vite development-only relaxations
 - [x] Automated unit/component/parser-stress/property/download/CSP/repository/datetime/PWA/migration/corrupt-data/offline/backup/keyboard/accessibility/pagination tests
+- [x] Component regression coverage for duplicate submission/mutation/update locks, cross-row exclusivity, navigation semantics, import retry, and safe error states
 - [x] Repeatable 10,000-task filtering/statistics benchmark harness using the pinned Vitest 4 API
 - [x] Deterministic documentation-link and secret-pattern repository checks
+- [x] Complete end-user, architecture, data-model, development, testing, operations, accessibility, performance, release, troubleshooting, support, privacy, security, and repository-governance documentation
+- [x] Machine-audited tracked-file index and exhaustive automated-test matrix
+- [x] Dependency-free `docs:inventory` check wired into `npm run check` and CI so tracked files/tests cannot silently become undocumented
+- [x] Architecture Decision Records for local-first PWA, Dexie repository, persistence validation, exclusive task mutations, and versioned portability
 - [x] CI, E2E, CodeQL, Dependabot, release, and repository-governance automation baseline
 - [x] Core GitHub workflows upgraded to current supported action majors
 - [x] Release workflow quality/audit/E2E gates and SHA-256 artifact checksum
 - [x] Fail-closed tag/version/lockfile release readiness guard
 - [ ] Complete clean-network dependency installation and browser verification in hosted CI
-- [ ] Capture real screenshots from a verified release build
-- [ ] Generate and commit the npm lockfile from a successful real registry resolution
+- [ ] Capture real screenshots from a verified release build and add them to the tracked-file documentation inventory
+- [ ] Generate and commit the npm lockfile from a successful real registry resolution and add it to the tracked-file documentation inventory
 - [ ] Complete the manual keyboard/zoom/theme/offline/reminder/import/update release checklist on the verified build
 - [ ] Tag `v0.1.0` only after all release gates are green
 

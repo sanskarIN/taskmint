@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { strings } from '../i18n/en';
 import { logError } from '../utils/logger';
 import './PwaUpdatePrompt.css';
 
 export function PwaUpdatePrompt() {
+  const activationLock = useRef(false);
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState('');
+  const [updating, setUpdating] = useState(false);
   const {
     needRefresh: [needRefresh],
     updateServiceWorker
@@ -19,26 +21,37 @@ export function PwaUpdatePrompt() {
   if (!needRefresh || dismissed) return null;
 
   async function activateUpdate() {
+    if (activationLock.current) return;
+    activationLock.current = true;
+    setUpdating(true);
     setError('');
     try {
       await updateServiceWorker(true);
     } catch (cause) {
       logError('pwa_update_failed', cause);
       setError(strings.updateFailed);
+    } finally {
+      activationLock.current = false;
+      setUpdating(false);
     }
   }
 
   return (
-    <aside className="toast update-prompt" aria-live="polite" aria-label={strings.updateAvailableTitle}>
+    <aside
+      className="toast update-prompt"
+      aria-live="polite"
+      aria-label={strings.updateAvailableTitle}
+      aria-busy={updating}
+    >
       <div>
         <strong>{strings.updateAvailableTitle}</strong>
         <p>{error || strings.updateAvailableBody}</p>
       </div>
       <div className="update-prompt-actions">
-        <button type="button" onClick={() => void activateUpdate()}>
+        <button type="button" onClick={() => void activateUpdate()} disabled={updating}>
           {strings.updateNow}
         </button>
-        <button type="button" onClick={() => setDismissed(true)}>
+        <button type="button" onClick={() => setDismissed(true)} disabled={updating}>
           {strings.updateLater}
         </button>
       </div>

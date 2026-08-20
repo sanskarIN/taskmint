@@ -44,6 +44,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `.github/workflows/ci.yml`
 - `.github/workflows/codeql.yml`
 - `.github/workflows/e2e.yml`
+- `.github/workflows/native.yml`
 - `.github/workflows/release.yml`
 
 ## Benchmarks
@@ -60,6 +61,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `docs/adr/0004-exclusive-task-mutations.md`
 - `docs/adr/0005-versioned-data-portability.md`
 - `docs/architecture.md`
+- `docs/cross-platform.md`
 - `docs/data-model.md`
 - `docs/development.md`
 - `docs/file-index.md`
@@ -99,11 +101,28 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `scripts/check-release.mjs`
 - `scripts/check-secrets.mjs`
 
+## Native application shell
+
+- `src-tauri/Cargo.toml`
+- `src-tauri/build.rs`
+- `src-tauri/capabilities/desktop.json`
+- `src-tauri/capabilities/mobile.json`
+- `src-tauri/icons/128x128.png`
+- `src-tauri/icons/128x128@2x.png`
+- `src-tauri/icons/32x32.png`
+- `src-tauri/icons/icon.icns`
+- `src-tauri/icons/icon.ico`
+- `src-tauri/icons/icon.png`
+- `src-tauri/src/lib.rs`
+- `src-tauri/src/main.rs`
+- `src-tauri/tauri.conf.json`
+
 ## Application root source
 
 - `src/App.tsx`
 - `src/config.ts`
 - `src/main.tsx`
+- `src/platform.css`
 - `src/styles.css`
 
 ## Components
@@ -133,6 +152,12 @@ The inventory intentionally includes documentation and the inventory/checker fil
 
 - `src/i18n/en.ts`
 - `src/i18n/errors.ts`
+
+## Platform adapters
+
+- `src/platform/files.ts`
+- `src/platform/links.ts`
+- `src/platform/runtime.ts`
 
 ## Storage
 
@@ -171,6 +196,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `tests/keyboard.test.ts`
 - `tests/logger.test.ts`
 - `tests/mutation.test.ts`
+- `tests/native-config.test.ts`
 - `tests/notifications.test.ts`
 - `tests/order.test.ts`
 - `tests/property.test.ts`

@@ -367,6 +367,7 @@ Covers:
 Primary implementation:
 
 - `src/utils/export.ts`
+- `src/platform/files.ts`
 
 ## 6. Keyboard, notification, logging, and utility tests
 
@@ -401,6 +402,7 @@ Covers:
 Primary implementation:
 
 - `src/utils/notifications.ts`
+- `src/platform/runtime.ts`
 
 ### `tests/logger.test.ts`
 
@@ -466,6 +468,27 @@ Primary implementation/configuration:
 - `vite.config.ts`
 - `src/main.tsx`
 - `src/components/PwaUpdatePrompt.tsx`
+- `package.json`
+
+### `tests/native-config.test.ts`
+
+Protects the committed Tauri/native configuration and native-boundary integration.
+
+Covers:
+
+- expected Tauri application identifier and secure window configuration;
+- desktop/mobile capability files and least-privilege plugin permissions;
+- expected native build scripts and dependencies;
+- native-aware PWA/update and platform adapter wiring;
+- native CI presence for desktop, Android, and iOS targets.
+
+Primary implementation/configuration:
+
+- `src-tauri/tauri.conf.json`
+- `src-tauri/capabilities/desktop.json`
+- `src-tauri/capabilities/mobile.json`
+- `src/platform/`
+- `.github/workflows/native.yml`
 - `package.json`
 
 ### `tests/release-guard.test.ts`
@@ -593,7 +616,7 @@ The Vite/Vitest config sets:
 - test environment: `jsdom`;
 - setup file: `./src/test/setup.ts`.
 
-The same file also defines build/PWA behavior protected by configuration tests.
+The same file also defines build/PWA/native-development behavior protected by configuration tests.
 
 ## 12. Test execution layers
 
@@ -602,6 +625,7 @@ The same file also defines build/PWA behavior protected by configuration tests.
 ```bash
 npm run format:check
 npm run docs:check
+npm run docs:inventory
 npm run secrets:check
 ```
 
@@ -617,6 +641,7 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm run native:check
 ```
 
 ### Combined non-E2E quality suite
@@ -631,6 +656,10 @@ npm run check
 npm run test:e2e:install
 npm run test:e2e
 ```
+
+### Native hosted builds
+
+`.github/workflows/native.yml` validates desktop checks on Linux, Windows, and macOS, an Android ARM64 debug build, and an iOS simulator debug build.
 
 ### Dependency security
 
@@ -655,6 +684,7 @@ When changing:
 - **cross-component async behavior** — add App/integration regression rather than relying only on isolated components;
 - **keyboard/accessibility journeys** — add component/unit coverage and Playwright where browser focus behavior matters;
 - **PWA/update behavior** — add configuration/component/browser verification as appropriate;
+- **native/platform boundaries** — add config/unit coverage plus a real native CI build on affected targets;
 - **release/maintenance scripts** — execute scripts in isolated fixtures where practical;
 - **security/privacy controls** — add explicit regressions that fail if the protection is removed.
 

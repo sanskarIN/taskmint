@@ -1,0 +1,138 @@
+name: Native CI
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - '.github/workflows/native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22.23.2'
+  NPM_VERSION: '12.0.2'
+
+jobs:
+  desktop:
+    name: Desktop / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+      - name: Use pinned npm
+        run: npm install --global "npm@${{ env.NPM_VERSION }}" --ignore-scripts
+      - name: Verify JavaScript toolchain
+        run: |
+          node --version
+          npm --version
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts
+      - name: Build frontend
+        run: npm run build
+      - name: Check native Rust application
+        run: npm run native:check
+
+  android:
+    name: Android / aarch64 debug
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Android Rust target
+        run: rustup target add aarch64-linux-android
+      - name: Configure Android NDK
+        shell: bash
+        run: |
+          NDK_ROOT="$(find "$ANDROID_SDK_ROOT/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          if [ -z "$NDK_ROOT" ]; then
+            echo 'No Android NDK is installed on this runner.' >&2
+            exit 1
+          fi
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$NDK_ROOT" >> "$GITHUB_ENV"
+      - name: Use pinned npm
+        run: npm install --global "npm@${NPM_VERSION}" --ignore-scripts
+      - name: Verify JavaScript toolchain
+        run: |
+          node --version
+          npm --version
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts
+      - name: Initialize Android project
+        run: npm run tauri -- android init --ci
+      - name: Build Android debug package
+        run: npm run tauri -- android build --debug --target aarch64
+
+  ios:
+    name: iOS / simulator debug
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install iOS Rust targets
+        run: rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+      - name: Ensure CocoaPods is available
+        run: command -v pod >/dev/null 2>&1 || brew install cocoapods
+      - name: Use pinned npm
+        run: npm install --global "npm@${NPM_VERSION}" --ignore-scripts
+      - name: Verify JavaScript toolchain
+        run: |
+          node --version
+          npm --version
+      - name: Install frontend dependencies
+        run: npm install --ignore-scripts
+      - name: Initialize iOS project
+        run: npm run tauri -- ios init --ci
+      - name: Build iOS simulator package
+        shell: bash
+        run: |
+          if [ "$(uname -m)" = 'arm64' ]; then
+            TARGET='aarch64-sim'
+          else
+            TARGET='x86_64'
+          fi
+          npm run tauri -- ios build --debug --target "$TARGET" --ci

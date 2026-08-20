@@ -25,6 +25,7 @@ import {
 import type { AppSettings, SmartView, Task, TaskDraft, TaskFilters } from './domain/types';
 import { strings } from './i18n/en';
 import { userErrorMessage } from './i18n/errors';
+import { installExternalLinkHandler } from './platform/links';
 import { defaultSettings, repository } from './storage/repository';
 import { csvToTasks, downloadText, parseBackup, serializeBackup, tasksToCsv } from './utils/export';
 import { isEditableTarget, resolveGlobalShortcut } from './utils/keyboard';
@@ -86,6 +87,8 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => installExternalLinkHandler(), []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -151,12 +154,28 @@ export default function App() {
 
   useEffect(() => {
     if (!settings.notificationsEnabled) return;
-    const check = () => {
-      notifiedIds.current = notifyDueTasks(tasks, notifiedIds.current);
+    let cancelled = false;
+    let running = false;
+
+    const check = async () => {
+      if (running) return;
+      running = true;
+      try {
+        const next = await notifyDueTasks(tasks, notifiedIds.current);
+        if (!cancelled) notifiedIds.current = next;
+      } catch (error) {
+        logError('reminder_check_failed', error);
+      } finally {
+        running = false;
+      }
     };
-    check();
-    const timer = window.setInterval(check, 30_000);
-    return () => window.clearInterval(timer);
+
+    void check();
+    const timer = window.setInterval(() => void check(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [tasks, settings.notificationsEnabled]);
 
   useEffect(() => {

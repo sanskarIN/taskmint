@@ -1,0 +1,36 @@
+/* Native mobile safe-area adjustments. env() resolves to 0 on platforms without insets. */
+.topbar {
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-right: max(clamp(16px, 4vw, 48px), env(safe-area-inset-right));
+  padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left));
+}
+
+.workspace {
+  padding-right: max(clamp(16px, 4vw, 48px), env(safe-area-inset-right));
+  padding-left: max(clamp(16px, 4vw, 48px), env(safe-area-inset-left));
+}
+
+.footer {
+  padding-right: max(22px, env(safe-area-inset-right));
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+  padding-left: max(22px, env(safe-area-inset-left));
+}
+
+.modal-backdrop {
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  padding-left: max(18px, env(safe-area-inset-left));
+}
+
+.toast {
+  bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-left: max(14px, env(safe-area-inset-left));
+  }
+}

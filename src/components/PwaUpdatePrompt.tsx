@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { strings } from '../i18n/en';
+import { isNativeApp } from '../platform/runtime';
 import { logError } from '../utils/logger';
 import './PwaUpdatePrompt.css';
 
 export function PwaUpdatePrompt() {
+  if (isNativeApp()) return null;
+  return <WebPwaUpdatePrompt />;
+}
+
+function WebPwaUpdatePrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState('');
   const {

@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const tauriDevHost = process.env.TAURI_DEV_HOST;
+const tauriPlatform = process.env.TAURI_ENV_PLATFORM;
+const tauriDebug = Boolean(process.env.TAURI_ENV_DEBUG);
+
 export default defineConfig({
   plugins: [
     {
@@ -34,6 +38,28 @@ export default defineConfig({
       }
     })
   ],
-  build: { target: 'es2022', sourcemap: true, cssCodeSplit: true },
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: tauriDevHost || false,
+    hmr: tauriDevHost
+      ? {
+          protocol: 'ws',
+          host: tauriDevHost,
+          port: 1421
+        }
+      : undefined,
+    watch: {
+      ignored: ['**/src-tauri/**']
+    }
+  },
+  envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  build: {
+    target: tauriPlatform ? (tauriPlatform === 'windows' ? 'chrome105' : 'safari13') : 'es2022',
+    minify: tauriPlatform && tauriDebug ? false : 'esbuild',
+    sourcemap: tauriPlatform ? tauriDebug : true,
+    cssCodeSplit: true
+  },
   test: { environment: 'jsdom', setupFiles: './src/test/setup.ts' }
 });

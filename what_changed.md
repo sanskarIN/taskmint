@@ -1018,3 +1018,325 @@ These are release blockers, not silently assumed successes.
 5. Capture real screenshots and complete the manual release checklist only from the verified build.
 6. Do not create `v0.1.0` while any required gate is queued, pending, failing, stale, unavailable, or unreproduced.
 7. Do not add speculative feature work merely to increase commit count; continue only meaningful release/reliability work or log-backed fixes.
+
+---
+
+## Cross-platform continuation — 2026-08-20
+
+This section supersedes stale platform/verification instructions above for the current cross-platform branch while preserving the full earlier handoff history.
+
+### Current candidate
+
+- Base `main` SHA for this work: `4e4850eab204deeb95e4db2bca24f084aaae0d5e`.
+- Working branch: `feat/full-cross-platform`.
+- Pull request: **#18 — `feat: make TaskMint fully cross-platform with Tauri 2`**.
+- Before this `what_changed.md` commit, the branch was **40 commits ahead of `main` and 0 behind** and changed 38 files.
+- This handoff update adds one additional documentation commit on the same PR.
+- Do not treat earlier RC2–RC5 hosted runs as evidence for this branch. PR #18 is the current candidate for this platform expansion.
+
+### Cross-platform implementation completed
+
+TaskMint now has one shared React/TypeScript product core with two delivery families:
+
+1. **Web/PWA** for modern browsers and ChromeOS.
+2. **Tauri 2 native shells** for Windows, macOS, Linux, Android, and iOS/iPadOS.
+
+No task-domain fork was created for individual operating systems.
+
+#### Native application shell
+
+Added `src-tauri/` with:
+
+- `Cargo.toml` with exact top-level Tauri/plugin pins;
+- `build.rs`;
+- shared mobile-capable `src/lib.rs` entry point;
+- desktop `src/main.rs` entry point;
+- `tauri.conf.json` for application identity, window, CSP, prototype freezing, bundle metadata, and icons;
+- separate least-privilege desktop/mobile capability files;
+- native PNG/ICO/ICNS application icons derived from the existing TaskMint logo.
+
+Native plugins initialized:
+
+- filesystem;
+- dialog;
+- notification;
+- opener.
+
+No routine shell/process capability was added.
+
+#### Platform runtime boundary
+
+Added `src/platform/`:
+
+- `runtime.ts` — canonical Tauri runtime detection;
+- `files.ts` — browser Blob downloads vs native system open/save dialogs and scoped text-file access;
+- `links.ts` — native external HTTP(S)/mailto/tel routing through the operating system.
+
+Native file imports call filesystem metadata/stat before reading and enforce the same `TASK_LIMITS.importBytes` ceiling as browser imports.
+
+#### Portable reminders
+
+`src/utils/notifications.ts` now selects the appropriate delivery path at runtime:
+
+- Web/PWA => Web Notifications API;
+- native => Tauri notification plugin.
+
+The existing reminder privacy/reliability rules remain intact:
+
+- permission is requested only after explicit user action;
+- individual reminder delivery remains bounded;
+- excess due reminders use a title-free summary;
+- failed notifications remain retryable.
+
+`src/App.tsx` now awaits reminder checks and prevents overlapping async polling passes.
+
+TaskMint still does **not** claim OS-level background reminder scheduling after the process is fully terminated. That would require a separate per-platform lifecycle/background design.
+
+#### Portable import/export
+
+`downloadText(...)` is now asynchronous and uses the portable file boundary:
+
+- Web/PWA => Blob + download anchor;
+- native => system save dialog + scoped filesystem write.
+
+Settings import behavior is likewise runtime-aware:
+
+- Web/PWA => existing hidden file inputs;
+- native => system open dialog + scoped metadata/read access.
+
+Selected native content is routed back through TaskMint's existing validated JSON/CSV import path instead of duplicating validation logic.
+
+The existing browser download lifecycle test was updated to await the portable operation.
+
+#### Native external links
+
+In Tauri builds, delegated anchor handling opens `http:`, `https:`, `mailto:`, and `tel:` destinations through the operating system opener plugin. Internal app navigation is not intercepted.
+
+#### PWA/native update separation
+
+`PwaUpdatePrompt` now returns no service-worker updater inside Tauri. Browser/PWA builds retain the explicit waiting-worker **Update now / Later** flow. Native package updating remains a platform-distribution responsibility.
+
+#### Native CSP/IPC hardening
+
+The original HTML production CSP remains strict for browser/PWA builds.
+
+Tauri's native CSP explicitly allows its IPC schemes, and Vite now performs a native-only build transform so the HTML meta policy also permits:
+
+- `ipc:`
+- `http://ipc.localhost`
+
+This avoids the intersection of two CSP policies accidentally blocking native plugin calls while keeping the ordinary web build at `connect-src 'self'`.
+
+Development CSP relaxation remains development-only.
+
+#### Mobile safe-area support
+
+`index.html` now opts into `viewport-fit=cover`.
+
+Added `src/platform.css`, loaded after the shared stylesheet, to respect safe-area insets for:
+
+- sticky top bar;
+- workspace horizontal edges;
+- footer/home-indicator area;
+- modal backdrop;
+- toast bottom position;
+- narrow-screen topbar padding.
+
+On platforms without insets, CSS `env()` resolves without changing the ordinary desktop/browser layout.
+
+#### Vite/Tauri development integration
+
+`vite.config.ts` now supports Tauri desktop/mobile development through:
+
+- fixed port 5173;
+- `TAURI_DEV_HOST` binding;
+- native HMR host configuration;
+- `src-tauri` file-watch exclusion;
+- `TAURI_ENV_*` exposure;
+- WebView-aware build targets;
+- native/debug minification/sourcemap behavior;
+- native-only IPC CSP transform.
+
+The standard web/PWA build path remains the default when Tauri environment variables are absent.
+
+### Native CI added
+
+Added `.github/workflows/native.yml`.
+
+Desktop matrix:
+
+- Ubuntu 22.04 with Tauri's documented WebKitGTK/native prerequisites;
+- Windows latest;
+- macOS latest;
+- frontend production build plus `cargo check` through `npm run native:check`.
+
+Android lane:
+
+- Node 22;
+- Java 17;
+- Android SDK setup;
+- Android NDK discovery/environment configuration;
+- explicit `aarch64-linux-android` Rust target installation;
+- Tauri Android project initialization;
+- ARM64 debug package build.
+
+The iOS lane:
+
+- runs only on macOS;
+- installs the Tauri-documented Apple Rust targets;
+- ensures CocoaPods exists;
+- initializes the Tauri iOS project;
+- selects `aarch64-sim` or `x86_64` from runner architecture;
+- performs an iOS simulator debug build.
+
+These lanes validate source/buildability. Signed physical-device/store releases remain credentialed release-stage work.
+
+### Native configuration regression coverage
+
+Added `tests/native-config.test.ts` to the ordinary Vitest suite. It statically guards:
+
+- Tauri desktop/mobile npm scripts;
+- presence of Tauri API/CLI dependencies;
+- application identifier and frontend/dev URL wiring;
+- native IPC CSP allowances and prototype freezing;
+- separate desktop/mobile least-privilege capability sets;
+- absence of shell default capability;
+- `viewport-fit=cover`;
+- loading of `platform.css`;
+- suppression of the PWA updater in native runtime.
+
+`docs/testing.md` now documents this test and the native build-validation matrix.
+
+### Documentation completed for cross-platform work
+
+Added `docs/cross-platform.md` covering:
+
+- platform matrix;
+- source-target vs signed/store-release distinction;
+- shared app behavior;
+- native/browser adapters;
+- reminder limitation when fully terminated;
+- Tauri directory structure;
+- common prerequisites;
+- Windows/macOS/Linux development/build commands;
+- Android initialization/development/build flow;
+- iOS/iPadOS initialization/development/build flow;
+- ChromeOS PWA path;
+- native security model;
+- `TAURI_DEV_HOST` mobile development;
+- native CI coverage;
+- signing/store/release boundaries;
+- npm/Cargo lockfile requirements.
+
+Also synchronized:
+
+- `README.md` — cross-platform platform table, native CI badge, native features/security/build commands;
+- `CHANGELOG.md` — Tauri/native additions and fixes;
+- `docs/architecture.md` — platform boundary and native shell layers;
+- `docs/development.md` — native commands, architecture rules, capability/security rules, CI rules;
+- `docs/testing.md` — native config test and native CI matrix;
+- `.gitignore` — ignores `src-tauri/target/` without ignoring the future Cargo lockfile.
+
+### Current supported platform matrix
+
+| Platform | Delivery path | Current repository support |
+| --- | --- | --- |
+| Web | Browser | Implemented |
+| PWA | Installable browser app | Implemented |
+| ChromeOS | PWA | Implemented |
+| Windows | Tauri native app | Source target implemented |
+| macOS | Tauri native app | Source target implemented |
+| Linux | Tauri native app | Source target implemented |
+| Android | Tauri native app | Source target implemented |
+| iOS | Tauri native app | Source target implemented |
+| iPadOS | Tauri iOS app family | Source target implemented |
+
+“Source target implemented” means the repository has the native shell, platform adapters, permissions, icons, commands, documentation, and CI build lane. It does not mean store signing/provisioning credentials are committed or that a signed store artifact has been published.
+
+### Cross-platform files added in PR #18
+
+- `.github/workflows/native.yml`
+- `docs/cross-platform.md`
+- `src/platform.css`
+- `src/platform/files.ts`
+- `src/platform/links.ts`
+- `src/platform/runtime.ts`
+- `src-tauri/Cargo.toml`
+- `src-tauri/build.rs`
+- `src-tauri/capabilities/desktop.json`
+- `src-tauri/capabilities/mobile.json`
+- `src-tauri/icons/32x32.png`
+- `src-tauri/icons/128x128.png`
+- `src-tauri/icons/128x128@2x.png`
+- `src-tauri/icons/icon.png`
+- `src-tauri/icons/icon.ico`
+- `src-tauri/icons/icon.icns`
+- `src-tauri/src/lib.rs`
+- `src-tauri/src/main.rs`
+- `src-tauri/tauri.conf.json`
+- `tests/native-config.test.ts`
+
+Existing files updated include `.gitignore`, `CHANGELOG.md`, `README.md`, `docs/architecture.md`, `docs/development.md`, `docs/testing.md`, `index.html`, `package.json`, `src/App.tsx`, `src/components/PwaUpdatePrompt.tsx`, `src/components/SettingsDialog.tsx`, `src/i18n/en.ts`, `src/main.tsx`, `src/utils/export.ts`, `src/utils/notifications.ts`, `tests/download.test.ts`, `tests/notifications.test.ts`, `vite.config.ts`, and this handoff.
+
+### Verification status for PR #18 at this handoff
+
+Hosted suites were created for the earlier PR head and observed as queued:
+
+- CI
+- E2E
+- CodeQL
+- Native CI
+
+Subsequent source hardening commits intentionally superseded those earlier heads. Therefore their queued/cancelled state is not success and is not release evidence.
+
+The final exact head produced by this handoff update must receive a fresh set of PR #18 workflow runs. Treat only `completed` + `success` on that exact head as hosted evidence. If any lane fails, inspect its exact job log and fix the proven issue before merge.
+
+The execution sandbox used for this work still cannot resolve external package hosts, so no claim is made that local npm/Cargo dependency installation succeeded here. GitHub-hosted dependency/toolchain validation is required.
+
+### Cross-platform release blockers that remain
+
+1. **Fresh PR #18 hosted verification on the exact final head**
+   - CI success;
+   - E2E success;
+   - CodeQL success;
+   - Native CI desktop matrix success;
+   - Native CI Android debug success;
+   - Native CI iOS simulator debug success.
+
+2. **Real package-manager lockfiles before reproducible release**
+   - generate and review a real npm `package-lock.json` from npm;
+   - generate and review the real `src-tauri/Cargo.lock` from Cargo;
+   - never fabricate either lockfile manually.
+
+3. **Native signed-release prerequisites**
+   - Windows/macOS/Linux packaging verification as appropriate;
+   - Windows signing if distributing signed installers;
+   - macOS signing/notarization for public distribution where required;
+   - Android keystore/store signing and Play Console release setup;
+   - Apple signing identity, provisioning, App Store Connect configuration, notarization/store requirements where applicable.
+
+4. **Real-device/manual platform verification**
+   - Windows native launch/task lifecycle/import/export/notification/external links;
+   - macOS native equivalent;
+   - Linux native equivalent;
+   - Android phone/tablet layout, file picker, notification permission, external links, safe areas;
+   - iPhone/iPad layout, file picker, notification permission, external links, safe areas;
+   - browser/PWA/ChromeOS install/offline/update flows.
+
+5. **Real release screenshots and store assets**
+   - capture only from verified builds using fictional/demo data;
+   - do not fabricate screenshots as release evidence.
+
+6. **Release promotion**
+   - keep package version at `0.1.0` and do not create `v0.1.0` until the complete web/native release checklist and lockfile requirements pass.
+
+### Next continuation instruction after this cross-platform phase
+
+1. Read the **Cross-platform continuation — 2026-08-20** section first; it supersedes stale RC6 directions above.
+2. Inspect PR #18's exact current head and its fresh CI, E2E, CodeQL, and Native CI workflow runs.
+3. For any `completed` + `failure`, fetch the exact failed job steps/log and fix only the demonstrated failure.
+4. Do not call queued, pending, cancelled, skipped-required, or stale runs successful.
+5. Do not merge PR #18 until required current-head checks are green, unless repository policy explicitly prevents hosted runs and that limitation is documented instead of misrepresented.
+6. After merge, generate/review real npm and Cargo lockfiles from working package registries before release promotion.
+7. Perform real-device/platform manual verification and signed/store setup using owner-controlled credentials; never commit signing secrets.
+8. Preserve the shared-core architecture: platform differences belong in `src/platform/` or `src-tauri/`, not duplicated task-domain/UI forks.

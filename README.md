@@ -1,9 +1,10 @@
 <div align="center">
   <img src="public/taskmint-icon.svg" width="104" height="104" alt="TaskMint logo" />
   <h1>TaskMint</h1>
-  <p><strong>A calm, offline-first task manager that keeps your data in your browser.</strong></p>
+  <p><strong>A calm, offline-first task manager for web, desktop, and mobile.</strong></p>
 
 [![CI](https://github.com/sanskarIN/taskmint/actions/workflows/ci.yml/badge.svg)](https://github.com/sanskarIN/taskmint/actions/workflows/ci.yml)
+[![Native CI](https://github.com/sanskarIN/taskmint/actions/workflows/native.yml/badge.svg)](https://github.com/sanskarIN/taskmint/actions/workflows/native.yml)
 [![CodeQL](https://github.com/sanskarIN/taskmint/actions/workflows/codeql.yml/badge.svg)](https://github.com/sanskarIN/taskmint/actions/workflows/codeql.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -12,13 +13,13 @@
 
 ## Why TaskMint?
 
-TaskMint is a privacy-friendly to-do list for people who want useful organization without an account, cloud dependency, or manipulative productivity mechanics. Tasks persist in IndexedDB and the PWA shell is designed to keep working after assets have been cached.
+TaskMint is a privacy-friendly to-do list for people who want useful organization without an account, cloud dependency, or manipulative productivity mechanics. Tasks persist locally in IndexedDB. The web build is an installable offline-first PWA, while Tauri 2 provides native shells for Windows, macOS, Linux, Android, and iOS/iPadOS without forking the task-management core.
 
 The project deliberately treats local storage/imports as real trust boundaries: persisted and imported data is validated, multi-task writes are transactional, destructive restore is preflight-validated, and task UI success state is applied only after persistence succeeds.
 
 ## Screenshots
 
-Real release screenshots belong in `docs/screenshots/`. Until the first browser-verified release capture is produced, that folder documents the expected capture set rather than presenting mock/generated screenshots as real product evidence.
+Real release screenshots belong in `docs/screenshots/`. Until the first platform-verified release captures are produced, that folder documents the expected capture set rather than presenting mock/generated screenshots as real product evidence.
 
 ## Features
 
@@ -33,12 +34,16 @@ Real release screenshots belong in `docs/screenshots/`. Until the first browser-
 - Application-wide task mutation serialization prevents different task rows/forms from racing writes from one stale state snapshot; local component locks also protect same-control duplicate activation.
 - Collision-free order allocation for new recurring occurrences and CSV appends.
 - JSON backup/restore and CSV import/export with strict enums/calendar/timestamps/field validation, safe-integer ordering, duplicate-header checks, strict quote placement, explicit encoding versions, size/count limits, lossless structured tags, legacy compatibility, source row diagnostics, and spreadsheet-formula neutralization.
+- Portable file handling: browser downloads/file inputs on web/PWA and scoped system open/save dialogs in native applications.
 - Local productivity statistics: active/completed counts, due/overdue counts, bounded seven-day completions, and completion rate.
 - Light, dark, and system themes plus reduced-motion support.
 - First-run onboarding, empty/loading/offline/error states, responsive layouts, accessible navigation/filter groups, and touch-friendly controls.
-- Optional browser notifications requested only after explicit user action; large due-reminder bursts are bounded to a small individual batch plus one title-free summary notification.
+- Optional notifications requested only after explicit user action; web/PWA uses Web Notifications and native builds use the operating-system notification bridge.
+- Large due-reminder bursts are bounded to a small individual batch plus one title-free summary notification.
 - One-click local data deletion with confirmation and backup-first guidance.
 - Installable PWA with generated service worker/manifest and an explicit update prompt that waits for user action instead of automatically reloading over unsaved task input.
+- Native external `http:`, `https:`, `mailto:`, and `tel:` links open through the operating system rather than remaining trapped in the app WebView.
+- Least-privilege Tauri capability files are separated for desktop and mobile targets.
 
 ## Complete documentation
 
@@ -48,6 +53,7 @@ Core references:
 
 - [User guide](docs/user-guide.md) — complete end-user behavior, features, imports/exports, reminders, offline/PWA, recovery, accessibility.
 - [Setup](docs/setup.md) — environment, install, build, browser/E2E, local PWA/storage inspection.
+- [Cross-platform guide](docs/cross-platform.md) — Windows/macOS/Linux/Android/iOS/iPadOS/ChromeOS prerequisites, commands, CI, security boundaries, and release limitations.
 - [Architecture](docs/architecture.md) — runtime layers, data flow, persistence, concurrency, failures, PWA/security boundaries.
 - [Data model](docs/data-model.md) — exact Task/Settings/Backup contracts, IndexedDB versions, JSON v2, CSV `safe-text-v1`.
 - [Complete file index](docs/file-index.md) — machine-audited inventory of every tracked repository file.
@@ -97,9 +103,20 @@ Shortcuts are suspended while onboarding or Settings is open and while an App-wi
 
 ## Supported platforms
 
-TaskMint targets modern evergreen browsers on Windows, macOS, and Linux. It can be installed as a Progressive Web App where the browser supports PWA installation.
+| Platform | Distribution | Repository target |
+| --- | --- | --- |
+| Web | Modern evergreen browser | Supported |
+| PWA | Installable web app | Supported |
+| ChromeOS | PWA | Supported |
+| Windows | Native Tauri application | Supported source target |
+| macOS | Native Tauri application | Supported source target |
+| Linux | Native Tauri application | Supported source target |
+| Android | Native Tauri application | Supported source target |
+| iOS / iPadOS | Native Tauri application | Supported source target |
 
-The web/PWA build remains the primary distribution target. A desktop wrapper can be evaluated later only if native-only integrations justify the additional architecture.
+“Supported source target” means the repository contains the native shell, capabilities, platform adapters, build scripts, icons, and hosted native build lane. Public store distribution still requires publisher-owned signing identities, developer accounts, provisioning, and release credentials.
+
+The React/TypeScript product core is shared across every target. Platform-specific behavior is isolated under `src/platform/` and `src-tauri/`. See [docs/cross-platform.md](docs/cross-platform.md) for the complete platform guide.
 
 ## Technology
 
@@ -107,16 +124,18 @@ The web/PWA build remains the primary distribution target. A desktop wrapper can
 - Vite
 - Dexie / IndexedDB
 - vite-plugin-pwa / Workbox
+- Tauri 2 + Rust
+- Tauri dialog, filesystem, notification, and opener plugins
 - Vitest + Testing Library
 - Playwright
 - ESLint + typescript-eslint + Prettier
 - GitHub Actions + CodeQL
 
-Top-level dependencies are pinned to exact versions in `package.json`. A real npm-generated `package-lock.json` is a release requirement and must not be fabricated manually.
+Top-level JavaScript and Rust dependencies are exact-version pinned in `package.json` and `src-tauri/Cargo.toml`. Real npm- and Cargo-generated lockfiles are release requirements and must not be fabricated manually.
 
 ## Quick start
 
-Requirements: Node.js 22.12 or newer and npm.
+Use a Node.js version satisfying `package.json` and npm `12.0.2`; hosted workflows currently pin Node.js `22.23.2` and npm `12.0.2`.
 
 ```bash
 git clone https://github.com/sanskarIN/taskmint.git
@@ -129,9 +148,17 @@ Open the local URL printed by Vite.
 
 TaskMint requires no application backend, remote database, account, API key, or secret.
 
+For native desktop development, first install the Rust/Tauri prerequisites for your operating system, then run:
+
+```bash
+npm run tauri:dev
+```
+
+Android and iOS/iPadOS require their vendor SDK toolchains. See [docs/cross-platform.md](docs/cross-platform.md).
+
 ## Development setup
 
-See [docs/setup.md](docs/setup.md) for complete installation and browser/PWA setup and [docs/development.md](docs/development.md) for implementation rules.
+See [docs/setup.md](docs/setup.md) for web/PWA setup, [docs/development.md](docs/development.md) for implementation rules, and [docs/cross-platform.md](docs/cross-platform.md) for native prerequisites and commands.
 
 Core commands:
 
@@ -177,15 +204,23 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
+Native Rust/Tauri check after installing host prerequisites:
+
+```bash
+npm run native:check
+```
+
 Non-gating 10,000-task domain benchmark:
 
 ```bash
 npm run bench
 ```
 
-See [docs/testing.md](docs/testing.md), [docs/test-matrix.md](docs/test-matrix.md), and [docs/operations.md](docs/operations.md).
+See [docs/testing.md](docs/testing.md), [docs/test-matrix.md](docs/test-matrix.md), [docs/operations.md](docs/operations.md), and [docs/cross-platform.md](docs/cross-platform.md).
 
-## Production build and PWA preview
+## Production builds
+
+Web/PWA:
 
 ```bash
 npm run build
@@ -194,26 +229,36 @@ npm run preview
 
 Use build/preview rather than the development HMR server when verifying production CSP/service-worker/PWA behavior.
 
+Native desktop for the current host:
+
+```bash
+npm run tauri:build
+```
+
+Mobile initialization/build commands and signing boundaries are documented in [docs/cross-platform.md](docs/cross-platform.md).
+
 ## Architecture summary
 
-TaskMint is a layered client-side application:
+TaskMint is a layered local-first application:
 
 1. `src/domain/` — data types, limits, strict dates/timestamps, errors, manual order, task lifecycle/recurrence/filter/stats, persisted validation.
 2. `src/storage/` — Dexie schema/migrations and validated/transactional repository boundary.
 3. `src/utils/` — JSON/CSV portability, keyboard resolution, bounded reminders, privacy-safe logging, exclusive mutation helper.
-4. `src/i18n/` — externalized English product strings and safe typed-error presentation.
-5. `src/components/` — accessible presentation and local interaction locks.
-6. `src/App.tsx` — application state/use-case orchestration, persistence-first task flows, App-wide task mutation exclusion, browser effects.
+4. `src/platform/` — runtime detection plus browser/native boundaries for files and external links.
+5. `src/i18n/` — externalized English product strings and safe typed-error presentation.
+6. `src/components/` — accessible presentation and local interaction locks.
+7. `src-tauri/` — native Rust shell, plugin initialization, capabilities, packaging configuration, and native icons.
+8. `src/App.tsx` — application state/use-case orchestration, persistence-first task flows, App-wide task mutation exclusion, reminder lifecycle, and platform-safe effects.
 
-See [docs/architecture.md](docs/architecture.md), [docs/repository-reference.md](docs/repository-reference.md), and [docs/file-index.md](docs/file-index.md).
+See [docs/architecture.md](docs/architecture.md), [docs/cross-platform.md](docs/cross-platform.md), [docs/repository-reference.md](docs/repository-reference.md), and [docs/file-index.md](docs/file-index.md).
 
 ## Data ownership and portability
 
-Task content is stored in browser IndexedDB.
+Task content is stored locally in IndexedDB on the current browser profile or native application WebView profile.
 
 JSON is the full-fidelity backup/restore format. CSV is a human-readable interchange format and does not preserve original lifecycle timestamps.
 
-Imported files are size/count bounded and strictly validated. JSON restore validates the complete backup before destructive persistence begins. CSV appends allocate order slots after existing local tasks.
+Imported files are size/count bounded and strictly validated. JSON restore validates the complete backup before destructive persistence begins. CSV appends allocate order slots after existing local tasks. Native file access remains user-mediated through operating-system open/save dialogs and scoped filesystem permissions.
 
 See [docs/data-model.md](docs/data-model.md) and [docs/user-guide.md](docs/user-guide.md).
 
@@ -223,8 +268,10 @@ TaskMint is local-first: it does not require a backend/account and does not inte
 
 Security/privacy controls include:
 
-- restrictive committed production CSP;
+- restrictive committed production web CSP and explicit native Tauri CSP;
 - dev-only HMR/style CSP relaxations isolated to Vite serve mode;
+- least-privilege native capabilities without routine shell/process permissions;
+- native filesystem text access scoped through user-selected open/save dialog paths;
 - validation of persisted/imported records;
 - transactional multi-task persistence;
 - safe typed validation errors;
@@ -235,15 +282,15 @@ Security/privacy controls include:
 - CodeQL;
 - high-severity npm audit in CI/release.
 
-If current IndexedDB data cannot be validated safely, TaskMint blocks normal editing and leaves the stored browser records untouched rather than presenting an empty-looking writable state.
+If current IndexedDB data cannot be validated safely, TaskMint blocks normal editing and leaves the stored local records untouched rather than presenting an empty-looking writable state.
 
 Read [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
-## Browser reminders
+## Reminders
 
-Notifications are optional and permission is requested only after explicit user action.
+Notifications are optional and permission is requested only after explicit user action. Web/PWA builds use Web Notifications; native builds use the Tauri operating-system notification bridge.
 
-Browsers do not provide a reliable portable local background scheduler for a closed PWA, so TaskMint checks due reminders while the app is open. It bounds title-bearing notifications and summarizes excess due reminders without task titles.
+TaskMint currently checks due reminders while the application is running. It does not claim reliable OS-level background scheduling after the application is fully terminated. Title-bearing notifications remain bounded and excess due reminders are summarized without task titles.
 
 ## Accessibility
 
@@ -258,10 +305,11 @@ The package version can exist before a release tag; a version number alone is no
 Before tagging, the project requires:
 
 - real npm-generated committed `package-lock.json`;
-- exact-current-tree successful CI/E2E/CodeQL;
+- real Cargo-generated committed `src-tauri/Cargo.lock` for reproducible native dependency resolution;
+- exact-current-tree successful CI, E2E, Native CI, and CodeQL;
 - locked install and quality/audit/browser gates;
 - manual release checklist;
-- real screenshots from the verified build using fictional/demo data;
+- real screenshots from verified builds using fictional/demo data;
 - exact release tag/package version readiness check.
 
 Run the tag/lockfile guard only when preparing a real tag:
@@ -270,13 +318,13 @@ Run the tag/lockfile guard only when preparing a real tag:
 npm run release:check -- v0.1.0
 ```
 
-Tagged `v*.*.*` releases run a fail-closed workflow that installs with `npm ci`, reruns quality/audit/E2E, packages `dist/`, generates SHA-256 checksum, and publishes both files.
+Tagged `v*.*.*` web releases run a fail-closed workflow that installs with `npm ci`, reruns quality/audit/E2E, packages `dist/`, generates SHA-256 checksum, and publishes both files. Signed native/store releases require platform-owner signing credentials and remain a separate signing-sensitive release concern.
 
-See [docs/release.md](docs/release.md) and [docs/operations.md](docs/operations.md).
+See [docs/release.md](docs/release.md), [docs/operations.md](docs/operations.md), and [docs/cross-platform.md](docs/cross-platform.md).
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and keep changes focused, tested, accessible, privacy-conscious, and documented.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and keep changes focused, tested, accessible, privacy-conscious, cross-platform, and documented.
 
 ## License
 

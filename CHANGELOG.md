@@ -9,6 +9,13 @@ The project follows Semantic Versioning for tagged releases.
 ### Added
 
 - Production-oriented React/TypeScript/PWA application baseline.
+- Tauri 2 native application shell sharing the React/TypeScript product core across Windows, macOS, Linux, Android, and iOS/iPadOS.
+- ChromeOS installation path through the existing PWA distribution.
+- Native runtime boundary under `src/platform/` for runtime detection, scoped system file dialogs, operating-system external links, and native notifications.
+- Least-privilege desktop/mobile Tauri capabilities for dialog access, file metadata/text reads/writes, notifications, and URL opening without broad shell/process permissions.
+- Native PNG, Windows ICO, and macOS ICNS application icons derived from the existing TaskMint logo.
+- Native CI with Linux/Windows/macOS desktop checks, Android ARM64 debug build, and iOS simulator debug build lanes.
+- Complete cross-platform setup/build/security/release documentation in `docs/cross-platform.md`.
 - Offline IndexedDB persistence with explicit schema versions and an automated v1-to-v2 browser migration test.
 - Full task lifecycle, projects, tags, priorities, notes, due dates, reminders, and recurrence.
 - Smart views, search, filters, sorting, drag-and-drop, and keyboard ordering controls.
@@ -33,12 +40,20 @@ The project follows Semantic Versioning for tagged releases.
 - CI, E2E, CodeQL, Dependabot, and release workflows.
 - CI/CodeQL/E2E concurrency controls that cancel superseded runs on the same ref.
 - Tagged-release SHA-256 checksum generation for the packaged web artifact.
-- Security, privacy, accessibility, performance, release, troubleshooting, architecture, and GitHub governance documentation.
+- Security, privacy, accessibility, performance, release, troubleshooting, architecture, cross-platform, and GitHub governance documentation.
 - Keyboard focus trapping/restoration for onboarding and Settings dialogs.
 - Package-derived version display in the About section.
 
 ### Fixed
 
+- Use native system open/save dialogs and scoped filesystem text operations in Tauri builds while retaining browser file inputs/downloads on web/PWA builds.
+- Enforce the same import-size guard on native files by checking file metadata before reading contents.
+- Route reminder delivery through native system notifications in Tauri builds and Web Notifications in browser builds while retaining bounded aggregation/retry behavior.
+- Await reminder checks and prevent overlapping async polling passes after adding the native notification bridge.
+- Open external HTTP(S), email, and telephone links through the operating system in native builds instead of trapping navigation in the app WebView.
+- Disable the PWA service-worker update prompt inside native packages so native and PWA update mechanisms cannot compete.
+- Make Settings reminder/privacy/update copy runtime-aware rather than incorrectly referring to every target as a browser.
+- Configure Vite's fixed development port, `TAURI_DEV_HOST`, HMR host, Tauri watch exclusions, and native WebView build target behavior for desktop/mobile development.
 - Use the pinned Vitest 4 top-level `bench()` API rather than a later fixture-style benchmark API.
 - Reject impossible reminder and backup timestamps before JavaScript `Date` can normalize them into a different calendar date.
 - Reject malformed backup timestamps, impossible dates, invalid settings values, unsafe/non-integer task order values, duplicate backup task IDs, and oversized backup fields before restoring data.
@@ -83,13 +98,16 @@ The project follows Semantic Versioning for tagged releases.
 - `npm run check` includes formatting invariants, documentation-link validation, secret-pattern validation, linting, TypeScript checks, unit/component/property tests, and the production build.
 - Pull-request CI runs the repository hygiene checks in addition to lint/type/test/build/audit gates and automatically switches to `npm ci` once a lockfile is committed.
 - E2E workflow dependency installation also automatically switches to `npm ci` once a lockfile is committed.
+- Native CI independently exercises the Rust/Tauri desktop source on Linux, Windows, and macOS and performs Android/iOS debug build lanes using vendor SDK toolchains.
 - Core workflow actions are upgraded to current supported majors: checkout/setup-node v6, upload-artifact v7, and CodeQL v4; Dependabot continues monitoring GitHub Actions monthly.
 - Tagged releases fail closed unless the Git tag exactly matches `package.json` and a committed `package-lock.json` exists.
 - Tagged releases install dependencies with `npm ci --ignore-scripts`, then must pass `npm run check`, `npm audit --audit-level=high`, Chromium installation, and Playwright E2E before publication.
 - Tagged releases publish both the compressed web bundle and its SHA-256 checksum.
 - A real npm-generated `package-lock.json` remains required before the first release and will not be fabricated while registry access is unavailable.
-- Real release screenshots remain required from a browser-verified build and will not be fabricated.
+- A real Cargo-generated `src-tauri/Cargo.lock` is also required before a reproducible native release and will not be fabricated manually.
+- Native store/installer releases additionally require platform-owner signing, provisioning/notarization, and store credentials kept outside Git.
+- Real release screenshots remain required from verified builds and will not be fabricated.
 
 ### Release candidate status
 
-The package version is `0.1.0`, but no `v0.1.0` release tag has been created. Promote these Unreleased changes to `0.1.0` only after a fresh verification branch based on current `main` receives successful hosted CI, E2E, and CodeQL conclusions; a clean npm installation produces the real lockfile; `npm ci`/check/audit/E2E and the manual release checklist pass; and real release screenshots are captured.
+The package version is `0.1.0`, but no `v0.1.0` release tag has been created. Promote these Unreleased changes to `0.1.0` only after a fresh verification branch based on current `main` receives successful hosted web and native conclusions; real package-manager-generated lockfiles are reviewed; the locked check/audit/E2E/native suites and manual release checklist pass; platform signing/store requirements are completed where applicable; and real release screenshots are captured.

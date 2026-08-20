@@ -89,12 +89,23 @@ src-tauri/
 
 ## Common requirements
 
-- Node.js 22.12 or newer;
-- npm;
-- Rust stable compatible with the version declared in `src-tauri/Cargo.toml`;
-- the operating-system dependencies required by Tauri.
+TaskMint pins its JavaScript package-manager behavior so local and hosted builds use the same dependency resolver. Use a Node.js version compatible with the `engines.node` range in `package.json`; the hosted workflows currently use Node.js `22.23.2` and npm `12.0.2`. The `packageManager` field is the authoritative npm version for this release candidate.
 
-Install JavaScript dependencies first:
+You also need:
+
+- Rust stable compatible with the version declared in `src-tauri/Cargo.toml`;
+- the operating-system dependencies required by Tauri;
+- Android SDK/NDK/JDK tooling for Android builds;
+- macOS with Xcode/CocoaPods for iOS/iPadOS builds.
+
+Confirm the JavaScript toolchain before installing dependencies:
+
+```bash
+node --version
+npm --version
+```
+
+Install JavaScript dependencies:
 
 ```bash
 npm install
@@ -224,7 +235,7 @@ The native window uses an explicit Content Security Policy and prototype freezin
 2. Android project initialization plus an ARM64 debug build on Ubuntu;
 3. iOS project initialization plus a simulator debug build on macOS.
 
-The existing `ci.yml` continues to run formatting, documentation, secret scanning, lint, TypeScript, tests, web/PWA build, and npm audit.
+The quality, E2E, and native workflows pin the Node/npm pair instead of relying on the npm version bundled by a changing runner image. The existing `ci.yml` continues to run formatting, documentation, secret scanning, lint, TypeScript, tests, web/PWA build, and npm audit.
 
 ## Release boundaries
 

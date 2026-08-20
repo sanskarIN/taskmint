@@ -1,6 +1,6 @@
 # Testing
 
-TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, persistence atomicity, PWA update safety, local-data corruption recovery, and repository hygiene as release-critical paths.
+TaskMint uses multiple test layers and treats data portability, migrations, keyboard accessibility, reminders, offline behavior, documentation integrity, persistence atomicity, PWA update safety, native configuration, local-data corruption recovery, and repository hygiene as release-critical paths.
 
 ## Unit/domain
 
@@ -42,6 +42,8 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 
 `tests/pwa-config.test.ts` verifies prompt-mode PWA updates, absence of `autoUpdate`, the pinned `workbox-window` runtime dependency, explicit `updateServiceWorker(true)` activation, and mounting of the update prompt.
 
+`tests/native-config.test.ts` verifies the cross-platform Tauri scripts/dependencies, native IPC CSP bridge, desktop/mobile capability sets, absence of shell capability, mobile safe-area viewport wiring, and suppression of the PWA updater in a native runtime.
+
 `tests/repository.test.ts` verifies validated local task/settings reads, malformed-record rejection, default settings behavior, transactional bulk writes, bulk failure propagation, and empty-batch optimization.
 
 `tests/release-guard.test.ts` executes the dependency-free release guard against isolated temporary fixtures and verifies exact tag/version matching plus fail-closed lockfile behavior.
@@ -73,7 +75,7 @@ TaskMint uses multiple test layers and treats data portability, migrations, keyb
 
 `tests/property.test.ts` uses seeded deterministic generation rather than production randomness to exercise hundreds of CSV/JSON round trips containing quotes, commas, CR/LF, Unicode, pipes, brackets, and other parser-sensitive characters. Its malformed structured-tag fixtures explicitly use TaskMint's encoding marker. Fixed seeds make every failure reproducible.
 
-`tests/download.test.ts` verifies that export download clicks occur before object-URL cleanup and that cleanup is deferred to the next timer turn for browser compatibility.
+`tests/download.test.ts` verifies that the portable export operation is awaited, browser download clicks occur before object-URL cleanup, and cleanup is deferred to the next timer turn for browser compatibility.
 
 ## Component
 
@@ -100,6 +102,18 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
+## Native build validation
+
+`.github/workflows/native.yml` provides source/build validation that cannot be represented by browser-only tests:
+
+- Linux desktop Rust/Tauri check with the documented WebKitGTK/native prerequisites;
+- Windows desktop Rust/Tauri check;
+- macOS desktop Rust/Tauri check;
+- Android ARM64 Rust target + generated-project initialization + debug package build;
+- iOS Rust targets + generated-project initialization + simulator debug build on macOS.
+
+These jobs validate buildability, not store publishing. Physical-device signing, notarization, Android release signing, Apple provisioning, and store review remain release-stage checks with owner-controlled credentials.
+
 ## Performance benchmark
 
 `bench/task.bench.ts` uses Vitest 4's top-level `bench()` API to provide repeatable 10,000-task filtering/sorting and statistics benchmarks. Run them separately from pass/fail tests:
@@ -121,8 +135,8 @@ The first three checks intentionally require only Node.js and can run before npm
 
 ## CI gates
 
-Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component/property tests, production build, dependency audit, CodeQL, and Chromium E2E coverage. CI and E2E use `npm ci` automatically once a lockfile exists and otherwise retain the pre-release fallback install so development verification can continue before the first lockfile is generated. The E2E workflow also runs on pushes to `main`. CI, CodeQL, and E2E use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
+Pull requests run formatting invariants, documentation-link validation, secret-pattern validation, linting, type checks, unit/component/property/config tests, production build, dependency audit, CodeQL, Chromium E2E coverage, and a separate native workflow. CI and E2E use `npm ci` automatically once a lockfile exists and otherwise retain the pre-release fallback install so development verification can continue before the first lockfile is generated. The E2E workflow also runs on pushes to `main`. CI, CodeQL, E2E, and Native CI use concurrency cancellation so superseded runs on the same ref do not waste runner capacity.
 
 Current workflow definitions use supported current major versions for checkout/setup-node/upload-artifact and CodeQL, while Dependabot monitors GitHub Actions monthly.
 
-Tagged releases have no dependency-install fallback: they require the release guard, install only with `npm ci`, rerun the combined quality suite, high-severity dependency audit, and Chromium E2E, then create the release artifact and checksum.
+Tagged web releases have no dependency-install fallback: they require the release guard, install only with `npm ci`, rerun the combined quality suite, high-severity dependency audit, and Chromium E2E, then create the release artifact and checksum. Native signed/store release automation remains separate because its credentials and platform-specific publishing requirements must not be committed.

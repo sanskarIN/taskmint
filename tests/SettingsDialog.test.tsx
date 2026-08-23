@@ -1,6 +1,18 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const nativeState = vi.hoisted(() => ({ enabled: false }));
+const platformFiles = vi.hoisted(() => ({ pickTextFile: vi.fn() }));
+
+vi.mock('../src/platform/runtime', () => ({
+  isNativeApp: () => nativeState.enabled
+}));
+vi.mock('../src/platform/files', () => ({
+  pickTextFile: platformFiles.pickTextFile
+}));
+
 import { SettingsDialog } from '../src/components/SettingsDialog';
+import { TASK_LIMITS } from '../src/domain/limits';
 import { strings } from '../src/i18n/en';
 import { defaultSettings } from '../src/storage/repository';
 
@@ -20,6 +32,8 @@ function baseProps() {
 }
 
 beforeEach(() => {
+  nativeState.enabled = false;
+  platformFiles.pickTextFile.mockReset();
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     callback(0);
     return 1;
@@ -100,6 +114,55 @@ describe('SettingsDialog', () => {
     await vi.waitFor(() => {
       expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('false');
     });
+  });
+
+  it('uses the native picker for JSON restore without rendering browser file inputs', async () => {
+    nativeState.enabled = true;
+    platformFiles.pickTextFile.mockResolvedValue('{"schemaVersion":2,"tasks":[]}');
+    const props = baseProps();
+    const { container } = render(<SettingsDialog {...props} />);
+
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: strings.restoreJson }));
+
+    await vi.waitFor(() =>
+      expect(platformFiles.pickTextFile).toHaveBeenCalledWith(
+        { name: 'TaskMint JSON backup', extensions: ['json'] },
+        TASK_LIMITS.importBytes
+      )
+    );
+    await vi.waitFor(() => expect(props.onImportJson).toHaveBeenCalledTimes(1));
+    const imported = props.onImportJson.mock.calls[0]?.[0];
+    expect(imported).toBeInstanceOf(File);
+    expect(imported).toMatchObject({
+      name: 'taskmint-import.json',
+      type: 'application/json'
+    });
+  });
+
+  it('uses the native picker for CSV import and ignores cancellation', async () => {
+    nativeState.enabled = true;
+    platformFiles.pickTextFile.mockResolvedValueOnce('title,notes').mockResolvedValueOnce(null);
+    const props = baseProps();
+    render(<SettingsDialog {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: strings.importCsv }));
+
+    await vi.waitFor(() => expect(props.onImportCsv).toHaveBeenCalledTimes(1));
+    const imported = props.onImportCsv.mock.calls[0]?.[0];
+    expect(imported).toBeInstanceOf(File);
+    expect(imported).toMatchObject({
+      name: 'taskmint-import.csv',
+      type: 'text/csv'
+    });
+    expect(platformFiles.pickTextFile).toHaveBeenCalledWith(
+      { name: 'TaskMint CSV', extensions: ['csv'] },
+      TASK_LIMITS.importBytes
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: strings.importCsv }));
+    await vi.waitFor(() => expect(platformFiles.pickTextFile).toHaveBeenCalledTimes(2));
+    expect(props.onImportCsv).toHaveBeenCalledTimes(1);
   });
 
   it('clears stale action errors after the dialog is closed and reopened', async () => {

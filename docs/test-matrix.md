@@ -406,6 +406,23 @@ Primary implementation:
 - `src/platform/links.ts`
 - `src/platform/runtime.ts`
 
+### `tests/native-notifications.test.ts`
+
+Protects the native notification plugin boundary.
+
+Covers:
+
+- existing operating-system permission grants avoid redundant prompts;
+- missing permission triggers the native request flow;
+- denied requests remain disabled;
+- due reminders are delivered through the native plugin;
+- delivered IDs are marked only when permission is available.
+
+Primary implementation:
+
+- `src/utils/notifications.ts`
+- `src/platform/runtime.ts`
+
 ### `tests/keyboard.test.ts`
 
 Protects pure global shortcut resolution.

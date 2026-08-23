@@ -58,7 +58,13 @@ jobs:
           node --version
           npm --version
       - name: Install frontend dependencies
-        run: npm install --ignore-scripts
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --ignore-scripts
+          else
+            npm install --ignore-scripts
+          fi
       - name: Build frontend
         run: npm run build
       - name: Check native Rust application
@@ -99,7 +105,12 @@ jobs:
           node --version
           npm --version
       - name: Install frontend dependencies
-        run: npm install --ignore-scripts
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --ignore-scripts
+          else
+            npm install --ignore-scripts
+          fi
       - name: Initialize Android project
         run: npm run tauri -- android init --ci
       - name: Build Android debug package
@@ -127,7 +138,12 @@ jobs:
           node --version
           npm --version
       - name: Install frontend dependencies
-        run: npm install --ignore-scripts
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --ignore-scripts
+          else
+            npm install --ignore-scripts
+          fi
       - name: Initialize iOS project
         run: npm run tauri -- ios init --ci
       - name: Build iOS simulator package

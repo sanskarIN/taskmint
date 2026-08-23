@@ -159,6 +159,9 @@ describe('SettingsDialog', () => {
       { name: 'TaskMint CSV', extensions: ['csv'] },
       TASK_LIMITS.importBytes
     );
+    await vi.waitFor(() => {
+      expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('false');
+    });
 
     fireEvent.click(screen.getByRole('button', { name: strings.importCsv }));
     await vi.waitFor(() => expect(platformFiles.pickTextFile).toHaveBeenCalledTimes(2));

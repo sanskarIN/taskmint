@@ -41,7 +41,22 @@ describe('native external link adapter', () => {
     cleanup();
   });
 
-  it('does not intercept unsupported protocols', async () => {
+  it('keeps same-origin http links inside the native webview', () => {
+    const anchor = document.createElement('a');
+    anchor.href = '/';
+    document.body.append(anchor);
+    const cleanup = installExternalLinkHandler();
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+
+    anchor.dispatchEvent(event);
+
+    expect(new URL(anchor.href).origin).toBe(window.location.origin);
+    expect(event.defaultPrevented).toBe(false);
+    expect(opener.openUrl).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it('does not intercept unsupported protocols', () => {
     const anchor = document.createElement('a');
     anchor.href = 'taskmint://local/action';
     document.body.append(anchor);

@@ -36,7 +36,14 @@ const requiredNativePermissions = [
   'fs:allow-read-text-file',
   'fs:allow-write-text-file',
   'notification:default',
-  'opener:default'
+  'opener:allow-open-url',
+  'opener:allow-default-urls'
+];
+const forbiddenNativePermissions = [
+  'shell:default',
+  'opener:default',
+  'opener:allow-open-path',
+  'opener:allow-reveal-item-in-dir'
 ];
 
 describe('native cross-platform configuration', () => {
@@ -70,8 +77,10 @@ describe('native cross-platform configuration', () => {
       expect(desktopCapability.permissions).toContain(permission);
       expect(mobileCapability.permissions).toContain(permission);
     }
-    expect(desktopCapability.permissions).not.toContain('shell:default');
-    expect(mobileCapability.permissions).not.toContain('shell:default');
+    for (const permission of forbiddenNativePermissions) {
+      expect(desktopCapability.permissions).not.toContain(permission);
+      expect(mobileCapability.permissions).not.toContain(permission);
+    }
   });
 
   it('keeps mobile safe-area and native/PWA runtime boundaries wired', () => {

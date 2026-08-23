@@ -26,6 +26,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
       - name: Use pinned npm
         run: npm install --global "npm@${NPM_VERSION}" --ignore-scripts
       - name: Verify JavaScript toolchain

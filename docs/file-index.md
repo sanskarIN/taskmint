@@ -197,6 +197,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `tests/logger.test.ts`
 - `tests/mutation.test.ts`
 - `tests/native-config.test.ts`
+- `tests/native-notifications.test.ts`
 - `tests/notifications.test.ts`
 - `tests/order.test.ts`
 - `tests/platform-files.test.ts`

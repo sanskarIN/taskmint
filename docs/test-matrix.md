@@ -369,7 +369,42 @@ Primary implementation:
 - `src/utils/export.ts`
 - `src/platform/files.ts`
 
-## 6. Keyboard, notification, logging, and utility tests
+## 6. Platform, keyboard, notification, logging, and utility tests
+
+### `tests/platform-files.test.ts`
+
+Protects the native text-file adapter boundary.
+
+Covers:
+
+- selected save paths are passed to the filesystem plugin;
+- cancelled save/open dialogs do not perform filesystem I/O;
+- selected files are statted before reading;
+- oversized imports fail before content is read;
+- non-file paths are rejected;
+- valid selected files are read only after size/type checks.
+
+Primary implementation:
+
+- `src/platform/files.ts`
+- `src/platform/runtime.ts`
+
+### `tests/platform-links.test.ts`
+
+Protects native external-link routing.
+
+Covers:
+
+- supported external links use the operating-system opener;
+- nested click targets resolve to their owning anchor;
+- unsupported protocols are left alone;
+- non-primary clicks are not intercepted;
+- browser builds do not install the native interception behavior.
+
+Primary implementation:
+
+- `src/platform/links.ts`
+- `src/platform/runtime.ts`
 
 ### `tests/keyboard.test.ts`
 

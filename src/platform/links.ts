@@ -14,6 +14,9 @@ export function installExternalLinkHandler(): () => void {
 
     const url = new URL(anchor.href, window.location.href);
     if (!externalProtocols.has(url.protocol)) return;
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin === window.location.origin) {
+      return;
+    }
 
     event.preventDefault();
     void import('@tauri-apps/plugin-opener')

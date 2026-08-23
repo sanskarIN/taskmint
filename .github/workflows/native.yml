@@ -69,6 +69,14 @@ jobs:
         run: npm run build
       - name: Check native Rust application
         run: npm run native:check
+      - name: Preserve resolved Cargo lock
+        if: runner.os == 'Linux' && ${{ hashFiles('src-tauri/Cargo.lock') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-cargo-lock-${{ github.event.pull_request.head.sha || github.sha }}
+          path: src-tauri/Cargo.lock
+          if-no-files-found: error
+          retention-days: 7
 
   android:
     name: Android / aarch64 debug

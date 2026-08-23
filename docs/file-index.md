@@ -199,6 +199,8 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `tests/native-config.test.ts`
 - `tests/notifications.test.ts`
 - `tests/order.test.ts`
+- `tests/platform-files.test.ts`
+- `tests/platform-links.test.ts`
 - `tests/property.test.ts`
 - `tests/pwa-config.test.ts`
 - `tests/release-guard.test.ts`

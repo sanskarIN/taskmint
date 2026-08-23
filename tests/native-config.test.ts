@@ -35,12 +35,15 @@ const requiredNativePermissions = [
   'fs:allow-stat',
   'fs:allow-read-text-file',
   'fs:allow-write-text-file',
-  'notification:default',
+  'notification:allow-is-permission-granted',
+  'notification:allow-request-permission',
+  'notification:allow-notify',
   'opener:allow-open-url',
   'opener:allow-default-urls'
 ];
 const forbiddenNativePermissions = [
   'shell:default',
+  'notification:default',
   'opener:default',
   'opener:allow-open-path',
   'opener:allow-reveal-item-in-dir'

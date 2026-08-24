@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test';
 test('exposes labeled interactive controls and core landmarks', async ({ page }) => {
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
-  if (await start.isVisible()) await start.click();
+  if (await start.isVisible()) {
+    await start.click();
+    await expect(start).toBeHidden();
+  }
 
   await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('navigation')).toBeVisible();

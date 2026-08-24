@@ -27,6 +27,7 @@ const viteConfig = text('../vite.config.ts');
 const indexHtml = text('../index.html');
 const mainSource = text('../src/main.tsx');
 const pwaPrompt = text('../src/components/PwaUpdatePrompt.tsx');
+const windowsIcon = readFileSync(new URL('../src-tauri/icons/icon.ico', import.meta.url));
 
 const requiredNativePermissions = [
   'core:default',
@@ -83,6 +84,24 @@ describe('native cross-platform configuration', () => {
     for (const permission of forbiddenNativePermissions) {
       expect(desktopCapability.permissions).not.toContain(permission);
       expect(mobileCapability.permissions).not.toContain(permission);
+    }
+  });
+
+  it('keeps the Windows icon directory structurally complete', () => {
+    expect(windowsIcon.readUInt16LE(0)).toBe(0);
+    expect(windowsIcon.readUInt16LE(2)).toBe(1);
+    const imageCount = windowsIcon.readUInt16LE(4);
+    expect(imageCount).toBeGreaterThan(0);
+
+    const directoryEnd = 6 + imageCount * 16;
+    expect(windowsIcon.length).toBeGreaterThanOrEqual(directoryEnd);
+    for (let index = 0; index < imageCount; index += 1) {
+      const entryOffset = 6 + index * 16;
+      const imageLength = windowsIcon.readUInt32LE(entryOffset + 8);
+      const imageOffset = windowsIcon.readUInt32LE(entryOffset + 12);
+      expect(imageLength).toBeGreaterThan(0);
+      expect(imageOffset).toBeGreaterThanOrEqual(directoryEnd);
+      expect(imageOffset + imageLength).toBeLessThanOrEqual(windowsIcon.length);
     }
   });
 

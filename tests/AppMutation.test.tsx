@@ -78,13 +78,11 @@ describe('App task mutation gate', () => {
     fireEvent.click(secondComplete);
 
     expect(mocks.putTask).toHaveBeenCalledTimes(1);
-    expect((screen.getByRole('button', { name: 'Settings' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Settings' }).disabled).toBe(true);
 
     releaseFirst?.();
     await vi.waitFor(() => {
-      expect((screen.getByRole('button', { name: 'Complete Second task' }) as HTMLButtonElement).disabled).toBe(
-        false
-      );
+      expect(screen.getByRole('button', { name: 'Complete Second task' }).disabled).toBe(false);
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Complete Second task' }));

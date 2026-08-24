@@ -2,7 +2,7 @@
 
 The roadmap favors coherent improvements over feature count. Planned versions describe intent, not already-shipped functionality. The repository package version must continue to reflect the latest actually released version rather than a future roadmap target.
 
-## Product invariants through v1.5.0
+## Product invariants through v1.6.0
 
 These remain non-negotiable unless a future major-version decision explicitly changes them:
 
@@ -180,6 +180,35 @@ The v1.5.0 target combines the stable 1.x foundation into a stronger offline pro
 - [ ] Signed production packages where external credentials are available
 - [ ] Verified real screenshots and checksums produced from the final tagged build
 - [ ] No weakening of CSP, data validation, local-first storage, logging redaction, native least-privilege permissions, or destructive-operation safety to implement new features
+
+## v1.6.0 — Portable planning and local interoperability
+
+The v1.6.0 milestone extends the v1.5 power-workflow foundation without introducing a required server, account, or shared cloud database. Interoperability must remain explicit, user-controlled, portable, and safe to use offline.
+
+### Planned user capabilities
+
+- [ ] Calendar and timeline planning views derived entirely from local task due/reminder/recurrence data
+- [ ] Selective portable task bundles so users can export only chosen projects, views, or tasks instead of exposing a full backup
+- [ ] Safe bundle import preview with schema/version validation, duplicate detection, and conflict choices before mutation
+- [ ] Human-readable portable bundle summaries that clearly identify included tasks, projects, date range, and format version
+- [ ] Scheduled local automation rules with timezone-aware next-run previews, bounded catch-up behavior, and explicit pause controls
+- [ ] Backup-health surface showing the last user-created backup/import metadata stored locally without uploading backup contents
+- [ ] Recovery checkpoints for high-impact local operations where storage limits make a bounded local rollback practical
+- [ ] Calendar/timeline keyboard navigation, screen-reader semantics, reduced-motion behavior, and touch layouts with feature parity
+- [ ] More granular reminder controls, including per-task suppression and clear local permission/status diagnostics where platforms expose them safely
+
+### Planned engineering requirements
+
+- [ ] Versioned selective-bundle schema with deterministic serialization, validation, migration fixtures, and compatibility documentation
+- [ ] Property/fuzz coverage for bundle merging, automation scheduling, recurrence interaction, timezone changes, and rollback boundaries
+- [ ] Atomic import/automation mutations with duplicate-run and interruption recovery guarantees
+- [ ] Incremental/indexed local queries for calendar/timeline surfaces when benchmark evidence demonstrates a need
+- [ ] Performance budgets for calendar/timeline generation and selective bundle import on large local datasets
+- [ ] Compatibility tests proving v1.5 data, backups, templates, saved views, and automation rules remain valid after v1.6 migration
+- [ ] Web/PWA, Windows, Linux, macOS, Android, and iOS capability parity or an explicitly documented secure platform limitation
+- [ ] No background/network service introduced solely to implement planning, bundle transfer, backup health, or automation scheduling
+- [ ] Exact-SHA CI, E2E, Native CI, CodeQL, dependency audit, documentation inventory, migration, and release-guard evidence before v1.6.0 tagging
+- [ ] Real cross-platform screenshots, signed packages where credentials are available, checksums, and rollback notes produced from the tagged source tree
 
 ## Version sequencing policy
 

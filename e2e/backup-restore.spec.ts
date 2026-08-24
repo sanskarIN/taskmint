@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test';
 test('backs up, deletes, and restores local tasks with JSON', async ({ page }) => {
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
-  if (await start.isVisible()) await start.click();
+  if (await start.isVisible()) {
+    await start.click();
+    await expect(start).toBeHidden();
+  }
 
   await page.getByPlaceholder('What needs to be done?').fill('Backup round trip');
   await page.getByRole('button', { name: 'Add task' }).click();

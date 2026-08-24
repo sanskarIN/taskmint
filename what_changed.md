@@ -11,154 +11,142 @@
 - Default branch: `main`
 - Integration branch: `integration/rc7-cross-platform`
 - Integration PR: **#20** — `feat: integrate RC7 hardening with full cross-platform support`
-- PR #20 must remain **draft** until CI, E2E, Native CI, and CodeQL all explicitly succeed for the exact final head.
-- Current `main` base remains `4e4850eab204deeb95e4db2bca24f084aaae0d5e` until integration is merged.
-- Immediately before this handoff update, the integration head was `22a95223fc1ce0c8b4092212ec4cb049fd92e97c`.
+- PR #20 remains **draft** until CI, E2E, Native CI, and CodeQL explicitly succeed for the exact final source head.
+- `main` base remains `4e4850eab204deeb95e4db2bca24f084aaae0d5e` until integration is merged.
+- Immediately before this handoff commit, the integration head was `6ea580eaa69dac1644aac3a5a5c00fdce9f38bb3`.
 - Requested commit identity: `Sanskar <sanskarin@outlook.in>`
 - Release status: **release candidate only; not released**
 - `v0.1.0` tag: **NOT CREATED**
 
-This file is the authoritative continuation checkpoint. Historical implementation detail remains available in Git history and `docs/handoffs/what_changed-rc6-2026-08-19.md`.
+This file is the authoritative continuation checkpoint. Older implementation detail remains in Git history and `docs/handoffs/what_changed-rc6-2026-08-19.md`.
 
 ---
 
-# Verification rule
+# Exact-SHA verification rule
 
 Only explicit successful checks for the **exact current source SHA** count as release verification.
 
 Do not treat any of these as success:
 
 - mergeable PR status;
-- queued/pending/in-progress workflows;
-- cancelled workflows;
-- missing checks;
-- checks attached to an older head;
+- queued, pending, in-progress, cancelled, or missing workflows;
+- checks attached to an older source SHA;
 - static inspection without dependency-backed execution;
-- fabricated lockfiles, screenshots, checksums, packages, or test output.
+- fabricated lockfiles, screenshots, checksums, packages, or manual-test claims.
 
-After the final code/documentation/lockfile commit, freeze that SHA and require explicit success for:
+After this handoff commit, freeze the source unless a concrete exact-head failure requires a focused fix. Require explicit success for:
 
 1. CI;
 2. E2E;
 3. Native CI;
 4. CodeQL.
 
-After merge, verify the actual resulting `main` tree again before tagging if its SHA differs from the verified PR source head.
+After merge, verify the resulting `main` SHA again before tagging if it differs from the verified PR source head.
 
 ---
 
-# Integrated product/reliability state
+# Integrated product and reliability state
 
-PR #20 contains the RC7 reliability history plus the Tauri 2 cross-platform implementation.
+PR #20 combines the complete RC7 reliability/documentation history with the Tauri 2 cross-platform implementation.
 
-Important preserved guarantees include:
+Preserved guarantees include:
 
 ## Persistence and data integrity
 
-- validation of task/settings reads before React state;
-- validation of task/settings writes at the repository boundary;
-- complete batch validation before transactions;
-- duplicate task-ID rejection before bulk writes;
-- transactional multi-task writes;
-- single task/settings/delete writes now execute inside explicit Dexie read-write transactions so their repository promises resolve at the transaction completion boundary;
-- backup validation before destructive restore scope;
-- fail-closed startup behavior for malformed local data;
-- deterministic safe-integer task ordering;
+- validated task/settings reads before React state;
+- validated task/settings writes at the repository boundary;
+- complete batch validation before transaction entry;
+- duplicate task-ID rejection before bulk persistence;
+- atomic multi-task writes;
+- explicit Dexie read-write transactions for single task/settings/delete operations so repository completion follows the transaction boundary;
+- complete backup validation before destructive restore scope;
+- fail-closed startup for malformed local data;
+- deterministic safe-integer ordering and duplicate-order normalization;
 - collision-free recurrence/import ordering;
-- strict JSON/CSV compatibility and validation;
-- spreadsheet-formula neutralization for exported user text.
+- strict JSON/CSV format and encoding-version validation;
+- spreadsheet-formula neutralization for user-controlled exported text;
+- strict calendar/timestamp parsing without JavaScript date rollover acceptance.
 
 ## Interaction/concurrency safety
 
 - synchronous duplicate-submit protection;
-- per-task mutation protection;
+- per-task mutation guards;
 - application-wide exclusive task mutation gate;
 - serialized Settings/data operations;
-- serialized onboarding and PWA update activation;
-- deterministic E2E onboarding setup that waits for real app readiness instead of racing the initial loading screen;
-- same-file browser import retry safety;
-- safe busy/disabled semantics during persistence.
+- serialized onboarding and PWA activation;
+- deterministic browser-test onboarding that waits for real application readiness rather than racing the loading screen;
+- same-file import retry safety;
+- safe pending/busy semantics during persistence.
 
-## Privacy/accessibility/PWA
+## Privacy, accessibility, and PWA
 
-- fail-closed development diagnostic metadata;
+- fail-closed development diagnostics and redacted unknown metadata;
 - restricted identifier logging;
-- active-view `aria-current` semantics;
-- named filter/search accessibility grouping;
+- active navigation `aria-current` semantics;
+- named search/filter grouping;
 - modal focus containment/restoration;
-- explicit prompt-mode PWA update flow;
-- no automatic update reload while user work may be in progress.
+- prompt-mode PWA updates;
+- no automatic update reload over unsaved task input;
+- responsive themes, reduced-motion support, keyboard workflows, and accessibility regression coverage.
 
 ---
 
-# TypeScript, lint, test, and Vite hardening completed on 2026-08-24
+# TypeScript, lint, build, and test hardening completed on 2026-08-24
 
-The integrated candidate previously failed before meaningful validation because Vite/browser and Node ambient types were incomplete and lint reported 80 errors.
+The integrated candidate originally stopped early with 80 lint errors plus TypeScript/Vite/Node ambient-type failures.
 
-This continuation fixed the actual causes rather than disabling rules:
+This continuation fixed the causes without disabling quality rules:
 
-- Vite client declarations now cover CSS side-effect imports and `ImportMeta.env`;
-- Node typings cover repository/config tests using `node:*` modules;
-- source/test assertions and unsafe-any cases were corrected;
-- async mocks that did not await work were made semantically correct;
-- Vitest no longer collects Playwright E2E specs;
-- filesystem-backed config tests no longer depend on jsdom `import.meta.url` behavior that made paths unstable;
-- the malformed future-CSV compatibility fixture was corrected;
-- Settings failure-message typing was widened without removing existing UI sections;
-- task order validation now narrows unknown numeric data safely;
-- Vite 8 production minification uses its Oxc path instead of forcing the legacy `esbuild` minifier.
+- Vite client declarations now cover CSS imports and `ImportMeta.env`;
+- Node typings cover tests using `node:*` modules;
+- unnecessary assertions and unsafe-any cases were removed or narrowed;
+- no-await async mocks were corrected;
+- Vitest excludes Playwright E2E files;
+- config filesystem tests use stable paths under jsdom;
+- malformed CSV compatibility fixtures were corrected;
+- Settings failure-message typing was widened without removing existing UI;
+- task-order validation safely narrows unknown numeric values;
+- Vite 8 production minification uses Oxc instead of forcing the legacy esbuild minifier.
 
-A historical candidate `f9f434aacd7f30c7cf646547a0e6d36fb5e2c61a` achieved a complete successful CI quality run: install, formatting, documentation checks, inventory, secret-pattern guard, lint, typecheck, unit/components, production build, and dependency audit. That is useful diagnostic evidence but is not final release evidence because later commits changed the head.
+Historical candidate `f9f434aacd7f30c7cf646547a0e6d36fb5e2c61a` achieved a complete green CI quality run including install, formatting, docs, inventory, secret checks, lint, typecheck, unit/components, production build, and dependency audit. It remains diagnostic evidence only because later source changes superseded it.
 
 ---
 
-# Browser E2E status
+# Browser E2E hardening
 
-Exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048` achieved an explicit **E2E success** and **CodeQL success**.
+Exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048` achieved explicit **E2E success** and **CodeQL success**.
 
-Earlier E2E failures exposed and led to fixes for:
+Earlier browser failures led to concrete fixes for:
 
-- checks that queried onboarding before TaskMint had left its loading state;
-- keyboard shortcuts being exercised before onboarding persistence/readiness was complete;
+- checking onboarding before TaskMint left the loading screen;
+- keyboard shortcuts running before onboarding became persisted/ready;
 - pagination reload racing onboarding persistence;
-- stale corrupt-data recovery wording assertions;
-- ambiguous `Offline` text matching the `offline-first` tagline as well as the badge.
+- stale corrupt-data recovery copy assertions;
+- ambiguous `Offline` matching the `offline-first` tagline.
 
-The E2E setup now waits for the real onboarding control and completion rather than relying on immediate `isVisible()` checks during startup.
+The current browser setup waits for the actual onboarding control/completion and uses unambiguous locators.
 
-Because later commits changed the source head, E2E and CodeQL must succeed again on the final candidate before merge.
+Later source commits mean E2E and CodeQL must succeed again on the final locked candidate.
 
 ---
 
-# CI regression-test barrier fixed
+# Repository commit-barrier regression test fixed
 
-On exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`, CI passed:
+On exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`, CI reached the unit suite after successfully passing install, generated-lock preservation, formatting, documentation, inventory, secret checks, lint, and typecheck.
 
-- dependency installation;
-- generated-lock preservation;
-- formatting;
-- documentation links;
-- documentation inventory;
-- secret-pattern checks;
-- lint;
-- typecheck.
-
-The only unit failure was the repository regression test `does not resolve a settings write until the transaction reports commit completion`.
-
-The application persistence implementation was not the cause. The test waited until the mocked settings table write was observed, but could attempt to invoke its optional transaction-release callback before that callback had actually been assigned. The optional call then became a no-op and the test waited until Vitest timed out.
+Its only failure was the regression test proving that a settings write does not resolve before the mocked transaction reports completion. The application persistence implementation was not the failing component; the test could invoke an optional release callback before the callback had been assigned, causing a no-op and timeout.
 
 Focused fix:
 
 - `f2976d375c3b23b5a99122e4a155f3c03e302195` — `test: synchronize repository commit barrier`
-- the test now waits for the commit-release callback itself to exist before asserting unresolved state and releasing the transaction.
 
-This preserves the intended durability regression coverage without weakening its assertion.
+The test now waits until the release callback exists, asserts that the repository promise is still unresolved, then releases the mocked transaction.
 
 ---
 
 # Cross-platform native status and Windows fix
 
-On exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`, Native CI produced these explicit results:
+On exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`, Native CI produced:
 
 - Linux desktop: **success**;
 - macOS desktop: **success**;
@@ -166,113 +154,152 @@ On exact head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`, Native CI produced the
 - iOS simulator debug: **success**;
 - Windows desktop: **failure**.
 
-The Windows frontend build succeeded. Rust `cargo check` failed while evaluating `tauri::generate_context!()` because the checked-in `src-tauri/icons/icon.ico` could not be fully parsed (`failed to fill whole buffer`).
+The Windows frontend build succeeded. Rust `cargo check` failed while evaluating `tauri::generate_context!()` because `src-tauri/icons/icon.ico` was not structurally complete (`failed to fill whole buffer`).
 
-The asset was regenerated from TaskMint's existing teal/checkmark branding as a standards-valid multi-resolution Windows ICO.
+The Windows icon was regenerated from the existing TaskMint teal/checkmark branding. An initial larger binary upload was detected as connector-truncated before it was treated as valid release evidence.
 
-An initial larger replacement attempt exposed that the connector write path had truncated that binary payload. That intermediate result was detected before treating it as verified release evidence.
-
-The final replacement is deliberately compact and has been confirmed in the GitHub tree:
+The final compact replacement is confirmed in the GitHub tree:
 
 - path: `src-tauri/icons/icon.ico`;
 - Git blob: `739115de482b2b59faaefa3b024a01bd102cbdfe`;
 - repository size: **5,554 bytes**;
-- local generated SHA-256: `d2f26daf0dd846259c7541a943602e04a1ae7fd73e1cb185ba20fdbbed3e909e`;
+- generated SHA-256: `d2f26daf0dd846259c7541a943602e04a1ae7fd73e1cb185ba20fdbbed3e909e`;
 - embedded resolutions: 16×16, 32×32, 48×48, and 256×256.
 
 Relevant commits:
 
-- `53d24ade58f6cc0d165a133fe5ec1fb7d6945833` — initial Windows icon regeneration attempt;
+- `53d24ade58f6cc0d165a133fe5ec1fb7d6945833` — initial icon regeneration attempt;
 - `db905fde3afc5c6f89a7e81e272721e6bdedf7a8` — `test: validate Windows icon resource bounds`;
 - `22a95223fc1ce0c8b4092212ec4cb049fd92e97c` — `fix: replace truncated Windows icon asset`.
 
-`tests/native-config.test.ts` now parses the ICO directory header and every image entry and asserts that each declared image payload remains inside the actual file bounds. A future truncated/corrupt ICO should therefore fail ordinary CI before Tauri's Windows macro reaches it.
+`tests/native-config.test.ts` now validates the ICO header, directory size, every entry offset, every image length, and each image payload bound. A future truncated icon should therefore fail ordinary CI before reaching Tauri's Windows resource macro.
 
-Windows Native CI still requires fresh exact-head execution to prove the replacement fixes the hosted Rust/Tauri check.
+Fresh final-head Native CI must still prove Windows acceptance of the replacement.
 
 ---
 
-# Dependency reproducibility artifacts now available
+# Reproducible dependency locks are now committed
 
-Real hosted dependency resolution has produced both required lockfile artifacts. They were downloaded and unpacked during this continuation; neither has been fabricated.
+The release reproducibility blocker is now materially closed in the repository. Both lockfiles came from genuine hosted dependency resolution; neither was manually fabricated.
 
-## npm
+## npm lock
 
-From exact source head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`:
+Original hosted artifact:
 
+- source head: `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`;
 - artifact ID: `9504681684`;
 - artifact name: `dependency-lock-2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`;
 - resolved file: `package-lock.json`;
-- file size: **318,056 bytes**;
-- file SHA-256: `da2556048830390fba7a2c4f382ae42202ec55298c194b4bf91ae792570faabe`.
+- file size before commit: **318,056 bytes**;
+- SHA-256: `da2556048830390fba7a2c4f382ae42202ec55298c194b4bf91ae792570faabe`;
+- generating install reported zero vulnerabilities.
 
-The dependency installation that generated it reported zero vulnerabilities.
+The committed lock is npm lockfile version 3 and retains application version `0.1.0`.
 
-## Cargo
+## Cargo lock
 
-From Native CI source head `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`:
+Original hosted artifact:
 
+- source head: `2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`;
 - artifact ID: `9504722021`;
 - artifact name: `native-cargo-lock-2eb59cbf4ff1b8ce28e1b0db41a4f612501e5048`;
-- resolved file: `Cargo.lock`;
-- file size: **127,939 bytes**;
-- file SHA-256: `f6ccc1f203de1ce9a2739374b084a185d099203f0e9a3df477c09fb1d5988a3f`.
+- resolved file: `src-tauri/Cargo.lock`;
+- file size before commit: **127,939 bytes**;
+- SHA-256: `f6ccc1f203de1ce9a2739374b084a185d099203f0e9a3df477c09fb1d5988a3f`.
 
-The commits after that source head changed tests, documentation, and the Windows icon only; dependency manifests were not changed. Prefer fresh final-head artifacts when available, then commit the genuine lockfiles and add them to the tracked-file documentation inventory.
+## Exact-byte bootstrap and cleanup
 
-At this handoff update, `package-lock.json` and `src-tauri/Cargo.lock` are still **NOT COMMITTED**. Do not mark the reproducibility work complete until they are checked into Git and exact-head validation has rerun using the locks.
+Because the connector's normal text/binary write path is unsuitable for safely reconstructing large generated lockfiles, a one-purpose integration-branch workflow was used to:
+
+1. download those exact artifact IDs with the repository Actions token;
+2. verify both known SHA-256 hashes before copying;
+3. commit the exact files with `Sanskar <sanskarin@outlook.in>`;
+4. push only to `integration/rc7-cross-platform`.
+
+Resulting lock commit:
+
+- `290101d926db3ab493e173cab20953230263d439` — `chore: commit verified dependency lockfiles`.
+
+Immediately after the lock commit, the temporary write-enabled workflow was removed:
+
+- `7bb5bd5865fb9565ed1b659f793efb852fa0133d` — `ci: remove one-time lockfile bootstrap`.
+
+The temporary workflow is **not** part of the final automation surface.
+
+Documentation/release bookkeeping:
+
+- `ca3e822859972fd5450352e90c0c61617fe6fd37` — `docs: inventory reproducible dependency locks`;
+- `6ea580eaa69dac1644aac3a5a5c00fdce9f38bb3` — `docs: mark dependency lock reproducibility complete`.
+
+`docs/file-index.md` now tracks both:
+
+- `package-lock.json`;
+- `src-tauri/Cargo.lock`.
+
+Hosted JavaScript jobs should now use the repository's locked-install path (`npm ci --ignore-scripts`) rather than re-resolving dependencies.
 
 ---
 
 # Native security/capability state
 
-TaskMint continues to use least-privilege feature-scoped Tauri permissions.
+TaskMint continues to use feature-scoped Tauri permissions.
 
-Opener grants only the required URL operations, including:
+Opener grants are restricted to URL behavior including:
 
 - `opener:allow-open-url`;
 - `opener:allow-default-urls`.
 
-Notification grants are limited to:
+Notification grants remain limited to:
 
 - `notification:allow-is-permission-granted`;
 - `notification:allow-request-permission`;
 - `notification:allow-notify`.
 
-Tests continue to forbid broader opener defaults/path/reveal capabilities and broad notification defaults.
-
-Same-origin HTTP(S) links remain inside the native webview; supported off-origin links are routed through the OS opener.
+Tests forbid broader opener defaults/path/reveal access and broad notification defaults. Same-origin HTTP(S) navigation stays inside the native webview while supported off-origin links route through the OS opener.
 
 ---
 
-# Future version preparation
+# Future-version preparation
 
-The runtime/package version remains `0.1.0`. Future roadmap preparation does **not** change the released version.
+The package/runtime version remains **`0.1.0`**. Roadmap preparation does not claim that future releases already exist.
 
 ## v1.5.0
 
-The existing v1.5 power-workflow roadmap remains the planned milestone for bulk workflows, saved smart views, templates, command palette, advanced recurrence, local automation, import conflict preview, recovery tooling, locale expansion, performance budgets, migration compatibility, and cross-platform release parity.
+The v1.5 power-workflow milestone remains planned around:
+
+- bulk workflows;
+- saved smart views;
+- templates;
+- local command palette;
+- advanced recurrence;
+- local automation;
+- import conflict preview;
+- recovery tooling;
+- additional locales;
+- large-dataset performance budgets;
+- v1.x migration compatibility;
+- full cross-platform release requirements.
 
 Tracking issue: **#21**.
 
 ## v1.6.0
 
-This continuation added the next roadmap milestone:
+This continuation prepared the next planned milestone around portable local planning/interoperability:
 
 - calendar/timeline planning from local task data;
 - selective portable task/project/view bundles;
-- safe bundle import preview and conflict resolution;
+- preflight bundle import and conflict resolution;
 - human-readable bundle summaries;
-- timezone-aware scheduled local automation with bounded catch-up;
-- local backup-health information without uploading backup content;
-- bounded local recovery checkpoints where practical;
+- timezone-aware scheduled local automation with bounded catch-up and pause controls;
+- local backup-health metadata without uploading backup contents;
+- bounded recovery checkpoints where practical;
 - accessible keyboard/screen-reader/reduced-motion/touch planning surfaces;
 - granular reminder controls and permission diagnostics;
-- versioned bundle schema and migration fixtures;
-- fuzz/property testing for bundle/scheduling/recurrence/rollback boundaries;
+- versioned selective-bundle schema and migrations;
+- property/fuzz coverage for bundle/scheduling/recurrence/timezone/rollback boundaries;
 - v1.5-to-v1.6 compatibility tests;
-- full web/desktop/mobile capability parity or explicitly documented secure limitations;
-- no required background network service for these local workflows.
+- web/Windows/Linux/macOS/Android/iOS parity or explicit secure limitations;
+- no required background network service solely for these local workflows.
 
 Roadmap commit:
 
@@ -282,37 +309,49 @@ Tracking issue:
 
 - **#22** — `roadmap: TaskMint v1.6.0 portable planning and local interoperability`.
 
-Do not change the package/runtime version to `1.5.0` or `1.6.0` until the prerequisite compatibility milestones are actually being released.
+Do not change the package/runtime version to `1.5.0` or `1.6.0` until prerequisite compatibility milestones are actually being released.
 
 ---
 
 # Documentation state
 
-The repository continues to include the documentation hub, user guide, data model, architecture, setup/development/testing guides, operations/release guides, accessibility/performance/troubleshooting guides, cross-platform guide, tracked-file index, test matrix, ownership/coupling reference, ADRs, screenshot policy, security/privacy/support/governance documentation, and this continuation handoff.
+The repository contains the documentation hub, user guide, data model, architecture, setup/development/testing guides, operations/release guides, accessibility/performance/troubleshooting guides, cross-platform guide, exhaustive tracked-file index, test matrix, ownership/coupling reference, ADRs, screenshot policy, security/privacy/support/governance documents, and this handoff.
 
-`npm run docs:inventory` remains a release gate. When the genuine npm/Cargo lockfiles are committed, add both paths to `docs/file-index.md` in the same hardening sequence.
+`npm run docs:inventory` remains an exact-head release gate. The two newly tracked dependency locks are represented in `docs/file-index.md`.
 
 ---
 
 # Remaining release blockers
 
-## 1. Final exact-head verification
+## 1. Final exact-head hosted verification
 
-The newest source after this handoff commit must receive explicit successful CI, E2E, Native CI, and CodeQL conclusions. Older green runs remain diagnostic evidence only.
+The source SHA created by this handoff commit must explicitly succeed in:
 
-## 2. Commit genuine dependency locks
+- CI;
+- E2E;
+- Native CI;
+- CodeQL.
 
-Commit the real generated `package-lock.json` and `src-tauri/Cargo.lock`, update `docs/file-index.md`, and rerun all exact-head gates using the committed locks.
+This verification must prove, among other things:
 
-## 3. Real screenshots
+- locked npm installation works from the committed `package-lock.json`;
+- the repository commit-barrier regression passes;
+- production web build succeeds;
+- browser E2E remains green;
+- Linux/macOS/Android/iOS remain green;
+- Windows Tauri/Rust accepts the compact valid ICO;
+- Cargo uses the committed lock successfully;
+- documentation inventory includes both locks.
 
-Capture screenshots only from a real verified release build using fictional/demo data. Never fabricate or claim manual screenshot verification that did not occur.
+## 2. Real screenshots
 
-## 4. Manual release matrix
+Capture release screenshots only from a real verified application build using fictional/demo data. Never fabricate screenshots or manual verification claims.
 
-Still requires real execution where automation cannot prove the outcome, including relevant browser/device checks for:
+## 3. Manual release matrix
 
-- keyboard navigation and focus behavior;
+Still requires real execution where hosted automation cannot prove user-facing behavior, including relevant checks for:
+
+- keyboard navigation and focus;
 - zoom/reflow;
 - light/dark/system themes;
 - reduced motion;
@@ -320,40 +359,39 @@ Still requires real execution where automation cannot prove the outcome, includi
 - PWA update UX;
 - JSON backup/restore;
 - CSV import/export;
-- notification permission behavior;
+- notification permissions;
 - native open/save dialogs;
 - native external links;
-- target-platform packaging/signing where applicable.
+- target-platform packaging/signing.
 
-## 5. Signing/store credentials
+## 4. Signing/store credentials
 
-Production signing, provisioning, notarization/store submission, and related secrets require real external credentials and must remain outside the repository.
+Production signing, provisioning, notarization, Play/App Store submission, and associated secrets require real external credentials and intentionally remain outside the repository.
+
+## 5. Release tag
+
+`v0.1.0` must not be created until all release gates, post-merge verification, and required manual/external release steps are genuinely complete.
 
 ---
 
 # Next continuation sequence
 
-Continue in this order:
-
-1. treat this handoff commit as the new PR #20 source head;
-2. freeze the head and inspect CI/E2E/Native CI/CodeQL for that exact SHA;
-3. confirm that the synchronized repository test passes and that Windows Tauri/Rust accepts the compact ICO;
-4. fix only concrete exact-head failures with focused commits;
-5. obtain the newest genuine `package-lock.json` and `src-tauri/Cargo.lock` artifacts when final-head workflows generate them;
-6. commit both genuine locks and add them to `docs/file-index.md`;
-7. rerun CI/E2E/Native CI/CodeQL on the new lockfile head and require explicit success;
-8. only after final exact-head success, mark PR #20 ready and merge it;
-9. verify the resulting `main` SHA again;
-10. close superseded integration PRs after successful integration;
-11. perform the real manual release checklist and capture real screenshots;
-12. run release guard, locked install, audit, quality suite, browser E2E, native package verification, and checksums on the final release tree;
-13. create `v0.1.0` only when every required release gate genuinely passes.
+1. Treat this handoff commit as the new PR #20 release-candidate head.
+2. Freeze it long enough for CI, E2E, Native CI, and CodeQL to complete.
+3. Inspect exact-head failures, if any, and fix only demonstrated defects with focused commits.
+4. Once all four exact-head gates explicitly succeed, mark PR #20 ready for review and integrate it according to repository policy.
+5. Verify the resulting `main` SHA again; a different merge SHA requires its own evidence before tagging.
+6. Close superseded integration PRs only after successful integration.
+7. Perform the real manual browser/device release matrix and capture real screenshots.
+8. Run release guard, locked install, dependency audit, quality suite, browser E2E, native package verification, and checksums on the final release tree.
+9. Complete real signing/provisioning/store work where credentials are available.
+10. Create `v0.1.0` only when every required release gate genuinely passes.
 
 ---
 
 # Commit policy
 
-Continue using small, meaningful, focused commits rather than artificial/no-op history. Conventional prefixes remain preferred:
+Continue using small, meaningful, focused commits rather than artificial/no-op history. Prefer Conventional Commit prefixes such as:
 
 - `fix:`
 - `feat:`
@@ -363,4 +401,4 @@ Continue using small, meaningful, focused commits rather than artificial/no-op h
 - `docs:`
 - `chore:`
 
-Reliability, reproducibility, release evidence, and maintainable history take priority over raw commit count.
+Reliability, reproducibility, traceable evidence, and maintainable history take priority over raw commit count.

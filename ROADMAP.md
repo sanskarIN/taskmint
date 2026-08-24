@@ -1,6 +1,19 @@
 # TaskMint Roadmap
 
-The roadmap favors coherent improvements over feature count.
+The roadmap favors coherent improvements over feature count. Planned versions describe intent, not already-shipped functionality. The repository package version must continue to reflect the latest actually released version rather than a future roadmap target.
+
+## Product invariants through v1.5.0
+
+These remain non-negotiable unless a future major-version decision explicitly changes them:
+
+- Local-first task storage remains the default.
+- No account, cloud backend, telemetry, or subscription is required for core task management.
+- Web/PWA remains a first-class build alongside native applications.
+- Native permissions remain least-privilege and feature-scoped.
+- Import/export formats remain versioned, validated, and migration-aware.
+- Destructive data operations remain explicit and recoverable where practical.
+- Accessibility, keyboard operation, privacy, security, and offline behavior remain release gates rather than optional polish.
+- Every release candidate must be verified from its exact source SHA; stale or queued checks are not release evidence.
 
 ## v0.1 — Local-first, cross-platform foundation
 
@@ -83,3 +96,94 @@ The roadmap favors coherent improvements over feature count.
 - [ ] Evaluate opt-in startup integration and deeper operating-system integrations without weakening the local-first/privacy model
 - [ ] Evaluate store-specific update/distribution workflows after signed release automation is proven
 - [ ] Keep the web/PWA build fully functional and first-class regardless of native-platform expansion
+
+## v0.5 — Advanced local productivity
+
+- [ ] Saved views combining search, project, tag, priority, status, and sort criteria
+- [ ] Reusable task templates with explicit local storage and export support
+- [ ] Multi-task editing with atomic persistence and Undo-aware behavior
+- [ ] Import dry-run summary with duplicate, invalid, and skipped-row explanations before mutation
+- [ ] Richer recurrence options with deterministic next-occurrence generation and migration fixtures
+- [ ] Optional local command palette for keyboard-first actions
+- [ ] Export/import compatibility tests spanning every supported historical schema
+
+## v1.0.0 — Stable local-first contract
+
+v1.0.0 is the compatibility milestone, not just a version-number jump.
+
+- [ ] Freeze and document the supported task/settings/backup compatibility policy
+- [ ] Define semantic-versioning rules for persisted schemas, backup schemas, and native capability changes
+- [ ] Maintain tested migrations from every supported pre-1.0 persisted schema
+- [ ] Complete signed production packaging for supported desktop/mobile stores where credentials are available
+- [ ] Establish release rollback/recovery procedures for web/PWA and native channels
+- [ ] Meet the full accessibility/manual release matrix on production packages
+- [ ] Publish verified screenshots and release artifacts generated from the tagged source tree
+- [ ] Require reproducible JavaScript and Rust lockfiles for every release candidate
+- [ ] Require green CI, E2E, Native CI, CodeQL, release guard, dependency audit, and documentation inventory on the exact release SHA
+
+## v1.1.0 — Faster capture and navigation
+
+- [ ] Expanded keyboard command palette and discoverable shortcut reference
+- [ ] Configurable quick-add defaults for project, priority, tags, and recurrence
+- [ ] Saved-view pinning and ordering
+- [ ] Recent-item navigation without collecting usage telemetry
+- [ ] Optional native global quick-capture entry point where platform security models allow it
+
+## v1.2.0 — Local workflow automation
+
+- [ ] User-defined local rules for safe task field changes and recurring creation
+- [ ] Preview-and-confirm mode for automation rules that can affect multiple tasks
+- [ ] Deterministic automation execution with transaction boundaries and duplicate-run protection
+- [ ] Portable/versioned automation export and validation
+- [ ] Clear per-rule enable/disable controls and local-only execution history bounded by privacy/storage limits
+
+## v1.3.0 — Deeper platform integration
+
+- [ ] Evaluate share-target/share-sheet capture on supported web/mobile platforms
+- [ ] Evaluate home-screen/widget surfaces that expose only user-approved local task data
+- [ ] Evaluate optional startup/background reminder integrations with explicit permissions
+- [ ] Improve signed installer/update UX without granting shell/process permissions to core TaskMint
+- [ ] Keep unsupported integrations absent rather than emulating them insecurely
+
+## v1.4.0 — Scale, performance, and resilience
+
+- [ ] Establish benchmark budgets for 1k, 10k, 50k, and 100k task datasets
+- [ ] Add measured IndexedDB read/write/index benchmarks and regression thresholds
+- [ ] Introduce virtualization, worker offloading, or indexed queries only when benchmark evidence justifies them
+- [ ] Add bounded recovery/export tools for large datasets and partially damaged local stores
+- [ ] Expand property/fuzz testing around import, migration, recurrence, ordering, and automation boundaries
+- [ ] Add release-size and startup-performance budgets for web and native builds
+
+## v1.5.0 — Power workflows release
+
+The v1.5.0 target combines the stable 1.x foundation into a stronger offline productivity system while keeping TaskMint usable without an account or network connection.
+
+### Planned user capabilities
+
+- [ ] Bulk-select, bulk-edit, archive, complete, restore, move, tag, and delete workflows with keyboard parity
+- [ ] Saved smart views with custom names, filters, ordering, and portable configuration
+- [ ] Reusable task and project templates
+- [ ] Local command palette covering navigation, capture, filtering, data tools, and supported task actions
+- [ ] Advanced recurrence with tested edge-case handling for month boundaries and timezone changes
+- [ ] Local automation rules with dry-run/preview, atomic application, duplicate-run protection, and explicit disable controls
+- [ ] Import preview with conflict/duplicate resolution before any write transaction begins
+- [ ] User-controlled local recovery tooling for inspectable invalid/corrupt records where safe repair is possible
+- [ ] Additional locale packs with complete keyboard/accessibility coverage
+
+### Planned engineering requirements
+
+- [ ] Backward-compatible v1.x persisted-data and backup migration suite
+- [ ] Stable feature-capability boundaries shared by web, Windows, Linux, macOS, Android, and iOS
+- [ ] Performance budgets and regression tests for large local datasets
+- [ ] Full cross-platform accessibility/manual verification matrix for v1.5.0
+- [ ] Reproducible npm/Cargo dependency locks and exact-SHA release evidence
+- [ ] Signed production packages where external credentials are available
+- [ ] Verified real screenshots and checksums produced from the final tagged build
+- [ ] No weakening of CSP, data validation, local-first storage, logging redaction, native least-privilege permissions, or destructive-operation safety to implement new features
+
+## Version sequencing policy
+
+- Do not change the package/runtime version to a future roadmap version before that version is actually being released.
+- Do not skip compatibility/migration work merely to reach a larger version number.
+- A planned feature can move between minor versions when evidence or implementation risk justifies it.
+- Security, corruption prevention, migration safety, accessibility, and release reproducibility take priority over roadmap dates or feature count.

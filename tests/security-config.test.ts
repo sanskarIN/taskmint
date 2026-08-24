@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const indexHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const indexHtml = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
 const csp = indexHtml.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1] ?? '';
 
 describe('production content security policy', () => {

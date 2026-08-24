@@ -45,9 +45,9 @@ describe('runExclusiveMutation', () => {
     const busy = vi.fn();
 
     await expect(
-      runExclusiveMutation(lock, busy, async () => {
-        throw new Error('simulated persistence failure');
-      })
+      runExclusiveMutation(lock, busy, () =>
+        Promise.reject(new Error('simulated persistence failure'))
+      )
     ).rejects.toThrow(/simulated persistence failure/i);
 
     expect(lock.current).toBe(false);

@@ -1,15 +1,17 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const viteConfig = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8');
-const promptSource = readFileSync(
-  new URL('../src/components/PwaUpdatePrompt.tsx', import.meta.url),
-  'utf8'
-);
-const mainSource = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
-const packageJson = JSON.parse(
-  readFileSync(new URL('../package.json', import.meta.url), 'utf8')
-) as { devDependencies?: Record<string, string> };
+function readRepositoryFile(path: string): string {
+  return readFileSync(resolve(process.cwd(), path), 'utf8');
+}
+
+const viteConfig = readRepositoryFile('vite.config.ts');
+const promptSource = readRepositoryFile('src/components/PwaUpdatePrompt.tsx');
+const mainSource = readRepositoryFile('src/main.tsx');
+const packageJson = JSON.parse(readRepositoryFile('package.json')) as {
+  devDependencies?: Record<string, string>;
+};
 
 describe('PWA update lifecycle', () => {
   it('keeps updates waiting instead of auto-reloading over unsaved task input', () => {

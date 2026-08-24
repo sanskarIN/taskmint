@@ -5,13 +5,13 @@ import type { TaskMintDatabase } from '../src/storage/db';
 import { TaskRepository, defaultSettings } from '../src/storage/repository';
 
 function repositoryHarness() {
-  const putTask = vi.fn(async (_task: Task) => undefined);
-  const bulkPut = vi.fn(async (_tasks: Task[]) => undefined);
-  const clearTasks = vi.fn(async () => undefined);
-  const toArray = vi.fn(async (): Promise<Task[]> => []);
-  const getSettings = vi.fn(async (): Promise<AppSettings | undefined> => undefined);
-  const putSettings = vi.fn(async (_settings: AppSettings) => undefined);
-  const clearSettings = vi.fn(async () => undefined);
+  const putTask = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
+  const bulkPut = vi.fn<(tasks: Task[]) => Promise<void>>().mockResolvedValue(undefined);
+  const clearTasks = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const toArray = vi.fn<() => Promise<Task[]>>().mockResolvedValue([]);
+  const getSettings = vi.fn<() => Promise<AppSettings | undefined>>().mockResolvedValue(undefined);
+  const putSettings = vi.fn<(settings: AppSettings) => Promise<void>>().mockResolvedValue(undefined);
+  const clearSettings = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const transaction = vi.fn(async (...args: unknown[]): Promise<void> => {
     const scope = args.at(-1);
     if (typeof scope !== 'function') throw new Error('missing transaction scope');

@@ -35,11 +35,11 @@ describe('TaskComposer', () => {
     fireEvent.submit(form);
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Add task' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Add task' }).hasAttribute('disabled')).toBe(true);
 
     resolveSubmit?.();
     await vi.waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add task' }).disabled).toBe(false);
+      expect(screen.getByRole('button', { name: 'Add task' }).hasAttribute('disabled')).toBe(false);
     });
   });
 
@@ -49,9 +49,10 @@ describe('TaskComposer', () => {
 
     const form = screen.getByRole('form', { name: 'Add task' });
     const title = screen.getByPlaceholderText('What needs to be done?');
+    if (!(title instanceof HTMLInputElement)) throw new Error('Task title input was not rendered.');
     expect(form.getAttribute('aria-disabled')).toBe('true');
     expect(title.disabled).toBe(true);
-    expect(screen.getByRole('button', { name: 'Add task' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Add task' }).hasAttribute('disabled')).toBe(true);
 
     fireEvent.submit(form);
     expect(onSubmit).not.toHaveBeenCalled();
@@ -71,6 +72,7 @@ describe('TaskComposer', () => {
     rerender(<TaskComposer editingTask={null} onSubmit={onSubmit} />);
     await vi.waitFor(() => {
       const input = screen.getByPlaceholderText('What needs to be done?');
+      if (!(input instanceof HTMLInputElement)) throw new Error('Task title input was not rendered.');
       expect(input.value).toBe('');
     });
     expect(screen.getByRole('button', { name: 'Add task' })).toBeDefined();

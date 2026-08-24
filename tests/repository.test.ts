@@ -141,6 +141,7 @@ describe('TaskRepository validated writes', () => {
       });
 
     await vi.waitFor(() => expect(putSettings).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(releaseCommit).toBeTypeOf('function'));
     expect(resolved).toBe(false);
 
     releaseCommit?.();

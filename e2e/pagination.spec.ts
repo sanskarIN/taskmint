@@ -3,10 +3,9 @@ import { expect, test } from '@playwright/test';
 test('progressively renders large task result sets', async ({ page }) => {
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
-  if (await start.isVisible()) {
-    await start.click();
-    await expect(start).toBeHidden();
-  }
+  await expect(start).toBeVisible();
+  await start.click();
+  await expect(start).toBeHidden();
 
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {

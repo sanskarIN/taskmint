@@ -7,6 +7,7 @@ import { TaskRepository, defaultSettings } from '../src/storage/repository';
 function repositoryHarness() {
   const putTask = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
   const bulkPut = vi.fn<(tasks: Task[]) => Promise<void>>().mockResolvedValue(undefined);
+  const deleteTask = vi.fn<(id: string) => Promise<void>>().mockResolvedValue(undefined);
   const clearTasks = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const toArray = vi.fn<() => Promise<Task[]>>().mockResolvedValue([]);
   const getSettings = vi.fn<() => Promise<AppSettings | undefined>>().mockResolvedValue(undefined);
@@ -18,7 +19,7 @@ function repositoryHarness() {
     await (scope as () => Promise<void>)();
   });
   const database = {
-    tasks: { put: putTask, bulkPut, clear: clearTasks, toArray },
+    tasks: { put: putTask, bulkPut, delete: deleteTask, clear: clearTasks, toArray },
     settings: { get: getSettings, put: putSettings, clear: clearSettings },
     transaction
   } as unknown as TaskMintDatabase;
@@ -26,6 +27,7 @@ function repositoryHarness() {
     repository: new TaskRepository(database),
     putTask,
     bulkPut,
+    deleteTask,
     clearTasks,
     toArray,
     getSettings,
@@ -67,22 +69,83 @@ describe('TaskRepository validated reads', () => {
 
 describe('TaskRepository validated writes', () => {
   it('rejects a malformed single task before writing it', async () => {
-    const { repository, putTask } = repositoryHarness();
+    const { repository, putTask, transaction } = repositoryHarness();
     const malformed = {
       ...createTask({ title: 'Invalid write' }),
       reminderAt: '2026-02-31T10:00:00Z'
     };
 
     await expect(repository.putTask(malformed)).rejects.toThrow(/reminderAt/i);
+    expect(transaction).not.toHaveBeenCalled();
     expect(putTask).not.toHaveBeenCalled();
   });
 
+  it('wraps valid single-task writes in a read-write transaction', async () => {
+    const { repository, putTask, transaction } = repositoryHarness();
+    const task = createTask({ title: 'Committed task' });
+
+    await repository.putTask(task);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0]?.[0]).toBe('rw');
+    expect(putTask).toHaveBeenCalledWith(task);
+  });
+
+  it('wraps task deletion in a read-write transaction', async () => {
+    const { repository, deleteTask, transaction } = repositoryHarness();
+
+    await repository.deleteTask('task-to-delete');
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0]?.[0]).toBe('rw');
+    expect(deleteTask).toHaveBeenCalledWith('task-to-delete');
+  });
+
   it('rejects malformed settings before writing them', async () => {
-    const { repository, putSettings } = repositoryHarness();
+    const { repository, putSettings, transaction } = repositoryHarness();
     const malformed = { ...defaultSettings, theme: 'neon' as AppSettings['theme'] };
 
     await expect(repository.saveSettings(malformed)).rejects.toThrow(/theme/i);
+    expect(transaction).not.toHaveBeenCalled();
     expect(putSettings).not.toHaveBeenCalled();
+  });
+
+  it('wraps valid settings writes in a read-write transaction', async () => {
+    const { repository, putSettings, transaction } = repositoryHarness();
+    const settings = { ...defaultSettings, onboardingComplete: true };
+
+    await repository.saveSettings(settings);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0]?.[0]).toBe('rw');
+    expect(putSettings).toHaveBeenCalledWith(settings);
+  });
+
+  it('does not resolve a settings write until the transaction reports commit completion', async () => {
+    const { repository, putSettings, transaction } = repositoryHarness();
+    let releaseCommit: (() => void) | undefined;
+    transaction.mockImplementationOnce(async (...args: unknown[]) => {
+      const scope = args.at(-1);
+      if (typeof scope !== 'function') throw new Error('missing transaction scope');
+      await (scope as () => Promise<void>)();
+      await new Promise<void>((resolve) => {
+        releaseCommit = resolve;
+      });
+    });
+
+    let resolved = false;
+    const pending = repository
+      .saveSettings({ ...defaultSettings, onboardingComplete: true })
+      .then(() => {
+        resolved = true;
+      });
+
+    await vi.waitFor(() => expect(putSettings).toHaveBeenCalledTimes(1));
+    expect(resolved).toBe(false);
+
+    releaseCommit?.();
+    await pending;
+    expect(resolved).toBe(true);
   });
 
   it('validates a restore completely before opening its destructive transaction', async () => {

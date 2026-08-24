@@ -19,14 +19,12 @@ describe('Onboarding', () => {
     fireEvent.click(start);
 
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect((start as HTMLButtonElement).disabled).toBe(true);
+    expect(start.disabled).toBe(true);
     expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('true');
 
     resolveComplete?.();
     await vi.waitFor(() => {
-      expect((screen.getByRole('button', { name: strings.onboardingStart }) as HTMLButtonElement).disabled).toBe(
-        false
-      );
+      expect(screen.getByRole('button', { name: strings.onboardingStart }).disabled).toBe(false);
     });
   });
 

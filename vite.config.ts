@@ -72,5 +72,9 @@ export default defineConfig({
     sourcemap: tauriPlatform ? tauriDebug : true,
     cssCodeSplit: true
   },
-  test: { environment: 'jsdom', setupFiles: './src/test/setup.ts' }
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['tests/**/*.{test,spec}.{ts,tsx}']
+  }
 });

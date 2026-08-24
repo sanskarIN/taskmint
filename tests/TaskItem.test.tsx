@@ -37,12 +37,12 @@ describe('TaskItem', () => {
     fireEvent.click(complete);
 
     expect(onToggle).toHaveBeenCalledTimes(1);
-    expect((complete as HTMLButtonElement).disabled).toBe(true);
+    expect(complete.disabled).toBe(true);
     expect(screen.getByRole('listitem').getAttribute('aria-busy')).toBe('true');
 
     resolveToggle?.();
     await vi.waitFor(() => {
-      expect((screen.getByRole('button', { name: 'Complete Ship TaskMint' }) as HTMLButtonElement).disabled).toBe(false);
+      expect(screen.getByRole('button', { name: 'Complete Ship TaskMint' }).disabled).toBe(false);
     });
   });
 
@@ -77,7 +77,7 @@ describe('TaskItem', () => {
     expect(row.getAttribute('aria-disabled')).toBe('true');
     expect(row.getAttribute('draggable')).toBe('false');
 
-    const buttons = screen.getAllByRole('button') as HTMLButtonElement[];
+    const buttons = screen.getAllByRole('button');
     expect(buttons.every((button) => button.disabled)).toBe(true);
 
     fireEvent.drop(row);

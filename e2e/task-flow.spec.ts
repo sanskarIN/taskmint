@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test';
 test('creates and completes a task offline-first', async ({ page, context }) => {
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
-  if (await start.isVisible()) await start.click();
+  if (await start.isVisible()) {
+    await start.click();
+    await expect(start).toBeHidden();
+  }
 
   await page.getByPlaceholder('What needs to be done?').fill('Plan the week');
   await page.getByRole('button', { name: 'Add task' }).click();

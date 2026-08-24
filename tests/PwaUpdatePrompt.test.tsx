@@ -36,12 +36,14 @@ describe('PwaUpdatePrompt', () => {
 
     expect(mocks.updateServiceWorker).toHaveBeenCalledTimes(1);
     expect(mocks.updateServiceWorker).toHaveBeenCalledWith(true);
-    expect(update.disabled).toBe(true);
+    expect(update.hasAttribute('disabled')).toBe(true);
     expect(screen.getByLabelText(strings.updateAvailableTitle).getAttribute('aria-busy')).toBe('true');
 
     resolveUpdate?.();
     await vi.waitFor(() => {
-      expect(screen.getByRole('button', { name: strings.updateNow }).disabled).toBe(false);
+      expect(screen.getByRole('button', { name: strings.updateNow }).hasAttribute('disabled')).toBe(
+        false
+      );
     });
   });
 
@@ -53,6 +55,8 @@ describe('PwaUpdatePrompt', () => {
 
     await vi.waitFor(() => expect(screen.getByText(strings.updateFailed)).toBeDefined());
     expect(document.body.textContent).not.toContain('service worker private detail');
-    expect(screen.getByRole('button', { name: strings.updateNow }).disabled).toBe(false);
+    expect(screen.getByRole('button', { name: strings.updateNow }).hasAttribute('disabled')).toBe(
+      false
+    );
   });
 });

@@ -69,7 +69,9 @@ describe('SettingsDialog', () => {
 
     expect(props.onChange).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('true');
-    expect(screen.getByRole('button', { name: strings.closeSettings }).disabled).toBe(true);
+    expect(
+      screen.getByRole('button', { name: strings.closeSettings }).hasAttribute('disabled')
+    ).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: strings.enableBrowserNotifications }));
     expect(props.onEnableNotifications).not.toHaveBeenCalled();

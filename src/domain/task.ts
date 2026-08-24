@@ -293,8 +293,10 @@ function normalizeDateTime(value: string | null | undefined): string | null {
 }
 
 function parseLocalDate(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year!, month! - 1, day!, 12, 0, 0, 0);
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
 }
 
 function startOfDay(date: Date): Date {

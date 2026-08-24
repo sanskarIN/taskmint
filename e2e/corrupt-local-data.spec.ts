@@ -68,7 +68,7 @@ test('fails closed when current IndexedDB data is malformed', async ({ page }) =
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'Could not safely load local TaskMint data.' })).toBeVisible();
-  await expect(page.getByText(/existing browser data was left in place/i)).toBeVisible();
+  await expect(page.getByText(/existing local data was left in place/i)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reload TaskMint' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add task' })).toHaveCount(0);
   await expect(page.getByPlaceholder('What needs to be done?')).toHaveCount(0);

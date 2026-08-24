@@ -298,9 +298,38 @@ export function SettingsDialog({
           </button>
         </div>
 
-        <div className="settings-section compact">
+        <div className="settings-section">
+          <h3>{strings.updates}</h3>
+          <p className="muted">
+            {nativeApp ? strings.nativeUpdatesDescription : strings.updatesDescription}
+          </p>
+          <button
+            type="button"
+            className="secondary"
+            disabled={actionBusy}
+            onClick={() => window.location.reload()}
+          >
+            {strings.reloadTaskMint}
+          </button>
+        </div>
+
+        <div className="settings-section about-section">
           <h3>{strings.about}</h3>
-          <p className="muted">{strings.version(APP_VERSION)}</p>
+          <p>
+            <strong>{strings.appName} v{APP_VERSION}</strong> · {strings.mitLicense}
+          </p>
+          <p>{strings.madeBy}</p>
+          <div className="link-list">
+            <a href="https://github.com/sanskarIN" target="_blank" rel="noreferrer">
+              {strings.github}
+            </a>
+            <a href="https://buymeacoffee.com/sanskarIN" target="_blank" rel="noreferrer">
+              {strings.buyMeACoffee}
+            </a>
+            <a href="mailto:sanskarin@outlook.in">sanskarin@outlook.in</a>
+            <a href="mailto:sanskarin.business@gmail.com">sanskarin.business@gmail.com</a>
+            <a href="mailto:supportramsandesh@gmail.com">{strings.support}</a>
+          </div>
         </div>
       </section>
     </div>

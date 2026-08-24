@@ -21,7 +21,10 @@ export class TaskRepository {
   }
 
   async putTask(task: Task): Promise<void> {
-    await this.database.tasks.put(validateTask(task));
+    const validatedTask = validateTask(task);
+    await this.database.transaction('rw', this.database.tasks, async () => {
+      await this.database.tasks.put(validatedTask);
+    });
   }
 
   async putTasks(tasks: Task[]): Promise<void> {
@@ -33,7 +36,9 @@ export class TaskRepository {
   }
 
   async deleteTask(id: string): Promise<void> {
-    await this.database.tasks.delete(id);
+    await this.database.transaction('rw', this.database.tasks, async () => {
+      await this.database.tasks.delete(id);
+    });
   }
 
   async replaceAllTasks(tasks: Task[]): Promise<void> {
@@ -50,7 +55,10 @@ export class TaskRepository {
   }
 
   async saveSettings(settings: AppSettings): Promise<void> {
-    await this.database.settings.put(validateSettings(settings));
+    const validatedSettings = validateSettings(settings);
+    await this.database.transaction('rw', this.database.settings, async () => {
+      await this.database.settings.put(validatedSettings);
+    });
   }
 
   async restoreBackup(backup: TaskBackup): Promise<void> {

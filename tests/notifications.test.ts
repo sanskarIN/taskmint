@@ -4,7 +4,7 @@ import { REMINDER_NOTIFICATION_BATCH, notifyDueTasks } from '../src/utils/notifi
 
 class FakeNotification {
   static permission: NotificationPermission = 'granted';
-  static requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
+  static requestPermission = vi.fn(() => Promise.resolve<NotificationPermission>('granted'));
   static calls: Array<{ title: string; options?: NotificationOptions }> = [];
 
   constructor(title: string, options?: NotificationOptions) {
@@ -14,7 +14,7 @@ class FakeNotification {
 
 class ThrowingNotification {
   static permission: NotificationPermission = 'granted';
-  static requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
+  static requestPermission = vi.fn(() => Promise.resolve<NotificationPermission>('granted'));
 
   constructor() {
     throw new Error('Notification delivery failed');
@@ -23,7 +23,7 @@ class ThrowingNotification {
 
 class SummaryThrowingNotification {
   static permission: NotificationPermission = 'granted';
-  static requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
+  static requestPermission = vi.fn(() => Promise.resolve<NotificationPermission>('granted'));
   static calls: Array<{ title: string; options?: NotificationOptions }> = [];
 
   constructor(title: string, options?: NotificationOptions) {

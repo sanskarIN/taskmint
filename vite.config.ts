@@ -68,7 +68,7 @@ export default defineConfig({
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
     target: tauriPlatform ? (tauriPlatform === 'windows' ? 'chrome105' : 'safari13') : 'es2022',
-    minify: tauriPlatform && tauriDebug ? false : 'esbuild',
+    minify: tauriPlatform && tauriDebug ? false : 'oxc',
     sourcemap: tauriPlatform ? tauriDebug : true,
     cssCodeSplit: true
   },

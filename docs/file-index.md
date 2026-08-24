@@ -25,6 +25,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 - `SUPPORT.md`
 - `eslint.config.js`
 - `index.html`
+- `package-lock.json`
 - `package.json`
 - `playwright.config.ts`
 - `tsconfig.app.json`
@@ -103,6 +104,7 @@ The inventory intentionally includes documentation and the inventory/checker fil
 
 ## Native application shell
 
+- `src-tauri/Cargo.lock`
 - `src-tauri/Cargo.toml`
 - `src-tauri/build.rs`
 - `src-tauri/capabilities/desktop.json`

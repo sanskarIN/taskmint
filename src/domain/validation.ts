@@ -77,7 +77,9 @@ export function validateTask(value: unknown): Task {
   if (tags.length > TASK_LIMITS.tags) fail('backup-task-tags-too-many');
 
   const order = value.order;
-  if (!Number.isSafeInteger(order)) fail('backup-task-order-invalid');
+  if (typeof order !== 'number' || !Number.isSafeInteger(order)) {
+    fail('backup-task-order-invalid');
+  }
 
   return {
     id,

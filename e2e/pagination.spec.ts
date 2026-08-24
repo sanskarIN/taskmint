@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test';
 test('progressively renders large task result sets', async ({ page }) => {
   await page.goto('/');
   const start = page.getByRole('button', { name: 'Start using TaskMint' });
-  if (await start.isVisible()) await start.click();
+  await expect(start).toBeVisible();
+  await start.click();
+  await expect(start).toBeHidden();
 
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
@@ -44,6 +46,7 @@ test('progressively renders large task result sets', async ({ page }) => {
   });
 
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Start using TaskMint' })).toHaveCount(0);
   await expect(page.locator('.task-card')).toHaveCount(100);
   const showMore = page.getByRole('button', { name: 'Show more tasks (1 remaining)' });
   await expect(showMore).toBeVisible();

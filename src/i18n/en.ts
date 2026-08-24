@@ -93,7 +93,7 @@ export const strings = {
   onboardingSaveError: 'Could not save the onboarding setting. Please try again.',
   closeSettings: 'Close settings',
   settingsSaveError: 'That setting could not be saved. Your existing local data was left in place.',
-  exportError: 'Could not create that export in this browser. Your local data was left unchanged.',
+  exportError: 'Could not create that export. Your local data was left unchanged.',
   appearanceAccessibility: 'Appearance & accessibility',
   theme: 'Theme',
   themeSystem: 'System',
@@ -103,10 +103,15 @@ export const strings = {
   reminders: 'Reminders',
   remindersDescription:
     'Browser notifications are optional and only requested after you choose to enable them.',
+  nativeRemindersDescription:
+    'System notifications are optional and only requested after you choose to enable them.',
   enableBrowserNotifications: 'Enable browser notifications',
+  enableNotifications: 'Enable notifications',
   dataPrivacy: 'Data & privacy',
   dataPrivacyDescription:
     'Your tasks are stored locally in this browser using IndexedDB. TaskMint does not require an account or server.',
+  nativeDataPrivacyDescription:
+    'Your tasks are stored locally on this device. TaskMint does not require an account or server.',
   backupJson: 'Backup JSON',
   exportCsv: 'Export CSV',
   restoreJson: 'Restore JSON',
@@ -115,6 +120,8 @@ export const strings = {
   updates: 'Updates',
   updatesDescription:
     'TaskMint waits for your approval before activating a new PWA version, so an update cannot reload over unsaved task input.',
+  nativeUpdatesDescription:
+    'Native TaskMint updates are installed through your platform distribution channel. Reload only refreshes the current app session.',
   updateAvailableTitle: 'TaskMint update ready',
   updateAvailableBody: 'Save any task draft, then update when you are ready to reload.',
   updateNow: 'Update now',
@@ -129,7 +136,7 @@ export const strings = {
   fatalBody: 'Your locally stored task data has not been intentionally changed.',
   loadFailed: 'Could not safely load local TaskMint data.',
   loadFailedBody:
-    'TaskMint stopped before allowing changes. Your existing browser data was left in place; reload after resolving the storage problem.',
+    'TaskMint stopped before allowing changes. Your existing local data was left in place; reload after resolving the storage problem.',
   taskUpdated: 'Task updated.',
   taskAdded: 'Task added.',
   taskSavedError: 'Could not save the task to local storage.',
@@ -146,7 +153,7 @@ export const strings = {
   taskRestored: 'Task restored.',
   taskReorderError: 'Could not reorder tasks. Your local data was left unchanged.',
   settingsStorageError: 'Could not save settings to local storage.',
-  remindersEnabled: 'Browser reminders enabled.',
+  remindersEnabled: 'Reminders enabled.',
   remindersNotEnabled: 'Notifications were not enabled.',
   restoreConfirm: (incoming: number, existing: number) =>
     `Restore ${incoming} tasks and replace the ${existing} tasks currently stored in TaskMint?`,
@@ -155,7 +162,7 @@ export const strings = {
   importedTasks: (count: number) => `Imported ${count} tasks.`,
   importCsvError: 'Could not import CSV.',
   deleteAllConfirm:
-    'Delete every TaskMint task and local setting from this browser? This cannot be undone unless you have a backup.',
+    'Delete every TaskMint task and local setting from this device? This cannot be undone unless you have a backup.',
   deleteAllError: 'Could not delete all local data. Your existing data was left in place.',
   deleteAllSuccess: 'All local TaskMint data was deleted.',
   taskCount: (count: number) => `${count} ${count === 1 ? 'task' : 'tasks'}`,

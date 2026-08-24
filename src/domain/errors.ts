@@ -8,6 +8,7 @@ export type TaskMintErrorCode =
   | 'task-reminder-invalid'
   | 'task-tag-too-long'
   | 'task-tags-too-many'
+  | 'task-batch-duplicate-id'
   | 'backup-json-invalid'
   | 'backup-object-invalid'
   | 'backup-schema-invalid'
@@ -89,6 +90,8 @@ export function errorMessage(code: TaskMintErrorCode, details: TaskMintErrorDeta
       return `Each tag must be ${details.max ?? 32} characters or fewer.`;
     case 'task-tags-too-many':
       return `A task can have at most ${details.max ?? 12} tags.`;
+    case 'task-batch-duplicate-id':
+      return `Task batch contains duplicate task id: ${details.id ?? 'unknown'}`;
     case 'backup-json-invalid':
       return 'Backup is not valid JSON.';
     case 'backup-object-invalid':

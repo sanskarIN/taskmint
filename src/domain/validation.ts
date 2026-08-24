@@ -1,72 +1,80 @@
-import { parseStrictDateTime } from './datetime';
-import { fail } from './errors';
 import { TASK_LIMITS } from './limits';
 import { normalizeDuplicateTaskOrders } from './order';
-import type { AppSettings, Priority, Recurrence, Task, TaskBackup, TaskStatus } from './types';
+import { parseStrictDateTime } from './datetime';
+import { TaskMintError } from './errors';
+import type { AppSettings, BackupPayload, Priority, Recurrence, Task, TaskStatus } from './types';
 
-const priorities = new Set<Priority>(['low', 'medium', 'high', 'urgent']);
-const recurrences = new Set<Recurrence>(['none', 'daily', 'weekly', 'monthly']);
-const statuses = new Set<TaskStatus>(['active', 'completed', 'archived']);
+function fail(code: string): never {
+  throw new TaskMintError(code, 'Invalid backup data.');
+}
 
-export function validateBackup(input: unknown): TaskBackup {
-  if (!isRecord(input)) fail('backup-object-invalid');
-  if (input.app !== 'TaskMint' || input.schemaVersion !== 2 || !Array.isArray(input.tasks)) {
-    fail('backup-schema-invalid');
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function string(value: unknown, field: string, max: number): string {
+  if (typeof value !== 'string') fail(`backup-${field}-invalid`);
+  const normalized = value.trim();
+  if (!normalized || normalized.length > max) fail(`backup-${field}-invalid`);
+  return normalized;
+}
+
+function optionalString(value: unknown, field: string, max: number): string {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string') fail(`backup-${field}-invalid`);
+  if (value.length > max) fail(`backup-${field}-invalid`);
+  return value;
+}
+
+function boolean(value: unknown, field: string): boolean {
+  if (typeof value !== 'boolean') fail(`backup-${field}-invalid`);
+  return value;
+}
+
+function nullableDate(value: unknown, field: string): string | null {
+  if (value === null) return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    fail(`backup-${field}-invalid`);
   }
-  if (input.tasks.length > TASK_LIMITS.backupTasks) fail('backup-too-many-tasks');
-
-  const tasks = input.tasks.map(validateTask);
-  const seenIds = new Set<string>();
-  for (const task of tasks) {
-    if (seenIds.has(task.id)) fail('backup-duplicate-task-id', { id: task.id });
-    seenIds.add(task.id);
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    fail(`backup-${field}-invalid`);
   }
+  return value;
+}
 
-  const settings = input.settings === undefined ? undefined : validateSettings(input.settings);
-  const exportedAt = validateTimestamp(input.exportedAt, 'exportedAt');
+function validateTimestamp(value: unknown, field: string): string {
+  if (typeof value !== 'string') fail(`backup-${field}-invalid`);
+  const parsed = parseStrictDateTime(value);
+  if (!parsed) fail(`backup-${field}-invalid`);
+  return parsed.toISOString();
+}
 
-  return {
-    app: 'TaskMint',
-    schemaVersion: 2,
-    exportedAt,
-    tasks: normalizeDuplicateTaskOrders(tasks),
-    ...(settings ? { settings } : {})
-  };
+function nullableTimestamp(value: unknown, field: string): string | null {
+  if (value === null) return null;
+  return validateTimestamp(value, field);
 }
 
 export function validateTask(value: unknown): Task {
   if (!isRecord(value)) fail('backup-task-invalid');
 
-  const id = string(value.id, 'id').trim();
-  if (!id || id.length > TASK_LIMITS.id) fail('backup-task-id-invalid');
-
-  const title = string(value.title, 'title').trim();
-  if (!title || title.length > TASK_LIMITS.title) fail('backup-task-title-invalid');
-
-  const notes = string(value.notes, 'notes');
-  if (notes.length > TASK_LIMITS.notes) fail('backup-task-notes-too-long');
-
-  const project = string(value.project, 'project').trim();
-  if (project.length > TASK_LIMITS.project) fail('backup-task-project-too-long');
-
-  const priority = string(value.priority, 'priority') as Priority;
-  const recurrence = string(value.recurrence, 'recurrence') as Recurrence;
-  const status = string(value.status, 'status') as TaskStatus;
-  if (!priorities.has(priority) || !recurrences.has(recurrence) || !statuses.has(status)) {
-    fail('backup-task-enum-invalid');
+  const id = string(value.id, 'task-id', TASK_LIMITS.id);
+  const title = string(value.title, 'task-title', TASK_LIMITS.title);
+  const notes = optionalString(value.notes, 'task-notes', TASK_LIMITS.notes);
+  const project = optionalString(value.project, 'task-project', TASK_LIMITS.project);
+  const priority = value.priority as Priority;
+  if (!['low', 'medium', 'high'].includes(priority)) fail('backup-task-priority-invalid');
+  const recurrence = value.recurrence as Recurrence;
+  if (!['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(recurrence)) {
+    fail('backup-task-recurrence-invalid');
   }
-
+  const status = value.status as TaskStatus;
+  if (!['open', 'completed', 'archived'].includes(status)) fail('backup-task-status-invalid');
   const completedAt = nullableTimestamp(value.completedAt, 'completedAt');
   const archivedAt = nullableTimestamp(value.archivedAt, 'archivedAt');
-  if (status === 'active' && (completedAt || archivedAt)) {
-    fail('backup-active-timestamps-invalid');
-  }
-  if (status === 'completed' && (!completedAt || archivedAt)) {
-    fail('backup-completed-timestamps-invalid');
-  }
-  if (status === 'archived' && !archivedAt) fail('backup-archived-timestamp-missing');
 
   if (!Array.isArray(value.tags)) fail('backup-task-tags-invalid');
+  if (value.tags.length > TASK_LIMITS.tags) fail('backup-task-tags-too-many');
   const normalizedTags = value.tags.map((tag) => {
     if (typeof tag !== 'string') fail('backup-task-tag-invalid');
     const normalized = tag.trim().toLowerCase();
@@ -77,7 +85,9 @@ export function validateTask(value: unknown): Task {
   if (tags.length > TASK_LIMITS.tags) fail('backup-task-tags-too-many');
 
   const order = value.order;
-  if (!Number.isSafeInteger(order)) fail('backup-task-order-invalid');
+  if (typeof order !== 'number' || !Number.isSafeInteger(order)) {
+    fail('backup-task-order-invalid');
+  }
 
   return {
     id,
@@ -114,40 +124,22 @@ export function validateSettings(value: unknown): AppSettings {
   };
 }
 
-function string(value: unknown, field: string): string {
-  if (typeof value !== 'string') fail('backup-field-invalid', { field });
-  return value;
-}
-
-function boolean(value: unknown, field: string): boolean {
-  if (typeof value !== 'boolean') fail('backup-field-invalid', { field });
-  return value;
-}
-
-function nullableDate(value: unknown, field: string): string | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    fail('backup-field-invalid', { field });
+export function validateBackup(value: unknown): BackupPayload {
+  if (!isRecord(value)) fail('backup-invalid');
+  if (value.schemaVersion !== 1) fail('backup-version-invalid');
+  const exportedAt = validateTimestamp(value.exportedAt, 'exportedAt');
+  if (!Array.isArray(value.tasks)) fail('backup-tasks-invalid');
+  if (value.tasks.length > TASK_LIMITS.tasks) fail('backup-tasks-too-many');
+  const tasks = normalizeDuplicateTaskOrders(value.tasks.map(validateTask));
+  const ids = new Set<string>();
+  for (const task of tasks) {
+    if (ids.has(task.id)) fail('backup-task-id-duplicate');
+    ids.add(task.id);
   }
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, 12, 0, 0, 0);
-  const normalized = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  if (normalized !== value) fail('backup-field-invalid', { field });
-  return value;
-}
-
-function nullableTimestamp(value: unknown, field: string): string | null {
-  if (value === null || value === undefined) return null;
-  return validateTimestamp(value, field);
-}
-
-function validateTimestamp(value: unknown, field: string): string {
-  if (typeof value !== 'string' || !value.trim()) fail('backup-field-invalid', { field });
-  const date = parseStrictDateTime(value);
-  if (!date) fail('backup-field-invalid', { field });
-  return date.toISOString();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return {
+    schemaVersion: 1,
+    exportedAt,
+    tasks,
+    settings: validateSettings(value.settings)
+  };
 }

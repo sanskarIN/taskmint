@@ -24,8 +24,8 @@ function baseProps() {
     onChange: vi.fn().mockResolvedValue(undefined),
     onExportJson: vi.fn(),
     onExportCsv: vi.fn(),
-    onImportJson: vi.fn().mockResolvedValue(undefined),
-    onImportCsv: vi.fn().mockResolvedValue(undefined),
+    onImportJson: vi.fn<(file: File) => Promise<void>>().mockResolvedValue(undefined),
+    onImportCsv: vi.fn<(file: File) => Promise<void>>().mockResolvedValue(undefined),
     onDeleteAll: vi.fn().mockResolvedValue(undefined),
     onEnableNotifications: vi.fn().mockResolvedValue(undefined)
   };
@@ -69,9 +69,7 @@ describe('SettingsDialog', () => {
 
     expect(props.onChange).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('dialog').getAttribute('aria-busy')).toBe('true');
-    expect((screen.getByRole('button', { name: strings.closeSettings }) as HTMLButtonElement).disabled).toBe(
-      true
-    );
+    expect(screen.getByRole('button', { name: strings.closeSettings }).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: strings.enableBrowserNotifications }));
     expect(props.onEnableNotifications).not.toHaveBeenCalled();
